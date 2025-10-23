@@ -1,0 +1,34 @@
+[package]
+name = "opendal-wasm"
+version = "0.1.0"
+edition = "2021"
+authors = ["S3 Studio Team"]
+description = "WebAssembly bindings for Apache OpenDAL S3 operations"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+opendal = { version = "0.50", features = ["services-s3"], default-features = false }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
+getrandom = { version = "0.2", features = ["js"] }
+uuid = { version = "1", features = ["v4", "js"] }
+futures = "0.3"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

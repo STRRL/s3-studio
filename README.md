@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# S3 Studio
 
-## Getting Started
+> **Multi-cloud file browser powered by Apache OpenDAL and WebAssembly**
 
-First, run the development server:
+A pure frontend application for browsing and managing files across AWS S3, Azure Blob Storage, Google Cloud Storage, and 50+ storage services.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🎯 Features
+
+- **🌐 Multi-Cloud Support**: Works with 59+ storage services via OpenDAL
+- **🚀 Pure Frontend**: No backend required - deploy as static site
+- **⚡ WASM Performance**: Near-native speed with Rust/WebAssembly
+- **🔒 Secure**: Your credentials stay in your browser
+- **📱 Progressive Web App**: Works offline, installable on desktop/mobile
+- **🎨 Modern UI**: Built with Next.js 16, React 19, and Tailwind CSS 4
+
+## 📦 Monorepo Structure
+
+```
+s3-studio/
+├── apps/
+│   └── s3-studio/          # Next.js web application
+├── packages/
+│   └── opendal-wasm/       # WASM bindings for OpenDAL
+├── docs/                   # Documentation
+├── ai-docs/                # Feasibility reports
+└── turbo.json              # Turborepo config
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Node.js** >= 20.0.0
+- **pnpm** >= 9.0.0
+- **Rust** >= 1.70.0
+- **wasm-pack** (install: `curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh`)
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+git clone https://github.com/your-org/s3-studio.git
+cd s3-studio
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+pnpm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+pnpm build:wasm
 
-## Deploy on Vercel
+pnpm dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🏗️ Development
+
+```bash
+pnpm dev              # Start all dev servers
+pnpm build            # Build all packages
+pnpm build:wasm       # Build WASM only
+pnpm lint             # Lint all packages
+```
+
+## 📚 Documentation
+
+- **[Feasibility Report](./ai-docs/opendal-s3-studio.md)** - Technical analysis
+- **[WASM Package](./packages/opendal-wasm/README.md)** - OpenDAL bindings
+
+## 📄 License
+
+Apache-2.0
+
+---
+
+**Built with ❤️ using Rust, WebAssembly, and React**

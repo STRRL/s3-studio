@@ -1,0 +1,30 @@
+{
+  "name": "@s3-studio/opendal-wasm",
+  "version": "0.1.0",
+  "description": "WebAssembly bindings for Apache OpenDAL S3 operations",
+  "main": "pkg/opendal_wasm.js",
+  "types": "pkg/opendal_wasm.d.ts",
+  "files": [
+    "pkg"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir pkg --release",
+    "build:dev": "wasm-pack build --target web --out-dir pkg --dev",
+    "test": "wasm-pack test --headless --chrome",
+    "clean": "rm -rf pkg target"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/s3-studio"
+  },
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "s3",
+    "opendal",
+    "rust"
+  ],
+  "author": "S3 Studio Team",
+  "license": "Apache-2.0",
+  "devDependencies": {}
+}
