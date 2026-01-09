@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useRef } from 'react';
 import type { S3ClientWrapper } from '@/lib/types';
 

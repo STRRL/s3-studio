@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { CredentialForm } from '@/components/credential-form';
 import { FileList } from '@/components/file-list';
@@ -8,7 +6,7 @@ import { useS3Client } from '@/hooks/use-s3-client';
 import { saveConfig, loadConfig, clearConfig } from '@/lib/storage';
 import type { S3Config, FileEntry } from '@/lib/types';
 
-export default function Home() {
+export default function App() {
   const [config, setConfig] = useState<S3Config | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -40,7 +38,7 @@ export default function Home() {
 
     try {
       const data = await client.read(file.path);
-      const blob = new Blob([data]);
+      const blob = new Blob([new Uint8Array(data)]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -103,7 +101,7 @@ export default function Home() {
                 onClick={() => setShowConfig(true)}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm"
               >
-                ⚙️ Settings
+                Settings
               </button>
               <button
                 onClick={handleDisconnect}
@@ -164,7 +162,7 @@ export default function Home() {
       <footer className="bg-white border-t mt-12">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-600">
           <p>
-            🔒 Your credentials stay in the browser and are never sent to any server.
+            Your credentials stay in the browser and are never sent to any server.
           </p>
           <p className="mt-2">
             Built with{' '}

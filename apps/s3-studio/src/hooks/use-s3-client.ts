@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import type { S3Config, S3ClientWrapper } from '@/lib/types';
 import { useWasm } from './use-wasm';

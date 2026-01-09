@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import type { FileEntry, S3ClientWrapper } from '@/lib/types';
 
