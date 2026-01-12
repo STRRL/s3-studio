@@ -1,0 +1,33 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_s3client_free: (a: number, b: number) => void;
+export const s3client_delete: (a: number, b: number, c: number) => number;
+export const s3client_list: (a: number, b: number, c: number) => number;
+export const s3client_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
+export const s3client_read: (a: number, b: number, c: number) => number;
+export const s3client_stat: (a: number, b: number, c: number) => number;
+export const s3client_write: (a: number, b: number, c: number, d: number, e: number) => number;
+export const __wbg_intounderlyingbytesource_free: (a: number, b: number) => void;
+export const __wbg_intounderlyingsink_free: (a: number, b: number) => void;
+export const __wbg_intounderlyingsource_free: (a: number, b: number) => void;
+export const intounderlyingbytesource_autoAllocateChunkSize: (a: number) => number;
+export const intounderlyingbytesource_cancel: (a: number) => void;
+export const intounderlyingbytesource_pull: (a: number, b: number) => number;
+export const intounderlyingbytesource_start: (a: number, b: number) => void;
+export const intounderlyingbytesource_type: (a: number) => number;
+export const intounderlyingsink_abort: (a: number, b: number) => number;
+export const intounderlyingsink_close: (a: number) => number;
+export const intounderlyingsink_write: (a: number, b: number) => number;
+export const intounderlyingsource_cancel: (a: number) => void;
+export const intounderlyingsource_pull: (a: number, b: number) => number;
+export const __wasm_bindgen_func_elem_2600: (a: number, b: number) => void;
+export const __wasm_bindgen_func_elem_2591: (a: number, b: number) => void;
+export const __wasm_bindgen_func_elem_3056: (a: number, b: number, c: number) => void;
+export const __wasm_bindgen_func_elem_3040: (a: number, b: number) => void;
+export const __wasm_bindgen_func_elem_4563: (a: number, b: number, c: number, d: number) => void;
+export const __wbindgen_export: (a: number, b: number) => number;
+export const __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_export3: (a: number) => void;
+export const __wbindgen_export4: (a: number, b: number, c: number) => void;
+export const __wbindgen_add_to_stack_pointer: (a: number) => number;

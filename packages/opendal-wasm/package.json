@@ -8,8 +8,9 @@
     "pkg"
   ],
   "scripts": {
-    "build": "wasm-pack build --target web --out-dir pkg --release",
+    "build": "[ -f pkg/opendal_wasm.js ] && echo 'Using pre-built WASM' || wasm-pack build --target web --out-dir pkg --release",
     "build:dev": "wasm-pack build --target web --out-dir pkg --dev",
+    "build:wasm": "wasm-pack build --target web --out-dir pkg --release",
     "test": "wasm-pack test --headless --chrome",
     "clean": "rm -rf pkg target"
   },
