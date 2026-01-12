@@ -6,37 +6,45 @@ import React from "react";
 interface FileBreadcrumbProps {
   bucketId: string;
   path: string[];
+  onNavigateTo?: (pathIndex: number) => void;
 }
 
-export function FileBreadcrumb({ bucketId, path }: FileBreadcrumbProps) {
-  const segments = [
-    { label: bucketId, href: `/buckets/${bucketId}` },
-    ...path.map((segment, index) => ({
-      label: segment,
-      href: `/buckets/${bucketId}/${path.slice(0, index + 1).join("/")}`,
-    })),
-  ];
+export function FileBreadcrumb({ bucketId, path, onNavigateTo }: FileBreadcrumbProps) {
+  const handleClick = (e: React.MouseEvent, pathIndex: number) => {
+    e.preventDefault();
+    onNavigateTo?.(pathIndex);
+  };
 
   return (
     <nav className="flex items-center gap-1 text-sm">
-      <a
-        href={`#/buckets/${bucketId}`}
+      <button
+        type="button"
+        onClick={(e) => handleClick(e, -1)}
         className="flex items-center text-muted-foreground hover:text-foreground"
       >
         <Home className="size-4" />
-      </a>
-      {segments.map((segment, index) => (
-        <React.Fragment key={segment.href}>
+      </button>
+      <ChevronRight className="size-4 text-muted-foreground" />
+      <button
+        type="button"
+        onClick={(e) => handleClick(e, -1)}
+        className={path.length === 0 ? "font-medium" : "text-muted-foreground hover:text-foreground"}
+      >
+        {bucketId}
+      </button>
+      {path.map((segment, index) => (
+        <React.Fragment key={index}>
           <ChevronRight className="size-4 text-muted-foreground" />
-          {index === segments.length - 1 ? (
-            <span className="font-medium">{segment.label}</span>
+          {index === path.length - 1 ? (
+            <span className="font-medium">{segment}</span>
           ) : (
-            <a
-              href={`#${segment.href}`}
+            <button
+              type="button"
+              onClick={(e) => handleClick(e, index)}
               className="text-muted-foreground hover:text-foreground"
             >
-              {segment.label}
-            </a>
+              {segment}
+            </button>
           )}
         </React.Fragment>
       ))}

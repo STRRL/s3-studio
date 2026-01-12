@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Download,
@@ -8,21 +8,25 @@ import {
   FileText,
   FileImage,
   File,
-  Copy,
-  Pencil,
-  Lock,
   Folder,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import type { FileItem } from "@/types/file";
 
 interface FilePropertiesPanelProps {
   file: FileItem | null;
   onClose: () => void;
+  onLoadPreview?: (path: string) => Promise<Uint8Array>;
+}
+
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"];
+
+function isImageFile(file: FileItem): boolean {
+  const ext = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+  return IMAGE_EXTENSIONS.includes(ext);
 }
 
 function getPreviewIcon(file: FileItem) {
@@ -30,7 +34,7 @@ function getPreviewIcon(file: FileItem) {
     return <Folder className="size-16 text-blue-500" />;
   }
   const mimeType = file.mimeType || "";
-  if (mimeType.startsWith("image/")) {
+  if (mimeType.startsWith("image/") || isImageFile(file)) {
     return <FileImage className="size-16 text-emerald-500" />;
   }
   if (mimeType.includes("pdf")) {
@@ -67,25 +71,88 @@ function PropertyRow({
   );
 }
 
-export function FilePropertiesPanel({ file, onClose }: FilePropertiesPanelProps) {
-  const [isPrivate, setIsPrivate] = useState(!file?.isPublic);
-  const [shareLink, setShareLink] = useState<string | null>(null);
-  const [linkForFolder, setLinkForFolder] = useState(false);
+export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FilePropertiesPanelProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || file.type === "folder" || !onLoadPreview || !isImageFile(file)) {
+      setPreviewUrl(null);
+      setPreviewError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    onLoadPreview(file.keyPath)
+      .then((data) => {
+        if (cancelled) return;
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+        let mimeType = "image/png";
+        if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+        else if (ext === ".gif") mimeType = "image/gif";
+        else if (ext === ".webp") mimeType = "image/webp";
+        else if (ext === ".svg") mimeType = "image/svg+xml";
+        else if (ext === ".bmp") mimeType = "image/bmp";
+        else if (ext === ".ico") mimeType = "image/x-icon";
+
+        const arrayBuffer = new Uint8Array(data).buffer;
+        const blob = new Blob([arrayBuffer], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+        setPreviewLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPreviewError(err instanceof Error ? err.message : "Failed to load preview");
+        setPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [file?.keyPath, file?.type, file?.name, onLoadPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   if (!file) return null;
 
-  const handleGenerateLink = () => {
-    setShareLink(`https://s3.example.com/share/${file.id}`);
-  };
-
-  const handleCopyLink = () => {
-    if (shareLink) {
-      navigator.clipboard.writeText(shareLink);
+  const renderPreview = () => {
+    if (previewLoading) {
+      return (
+        <div className="flex items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      );
     }
+
+    if (previewUrl && !previewError) {
+      return (
+        <img
+          src={previewUrl}
+          alt={file.name}
+          className="max-h-full max-w-full object-contain rounded"
+        />
+      );
+    }
+
+    return getPreviewIcon(file);
   };
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
+    <div className="flex h-full w-96 flex-col border-l bg-background">
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="font-semibold">Properties</h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -95,7 +162,7 @@ export function FilePropertiesPanel({ file, onClose }: FilePropertiesPanelProps)
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mb-6 flex aspect-square items-center justify-center rounded-lg bg-muted">
-          {getPreviewIcon(file)}
+          {renderPreview()}
         </div>
 
         <div className="space-y-4">
@@ -133,76 +200,6 @@ export function FilePropertiesPanel({ file, onClose }: FilePropertiesPanelProps)
           )}
         </div>
 
-        <Separator className="my-4" />
-
-        <div className="space-y-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Access & Sharing
-          </p>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Lock className="size-4 text-muted-foreground" />
-              <span className="text-sm">Private Access</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={isPrivate}
-                onCheckedChange={setIsPrivate}
-              />
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                <Pencil className="mr-1 size-3" />
-                Edit
-              </Button>
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1 text-xs text-muted-foreground">Expiration</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="M" className="h-8 text-sm" />
-              <Input placeholder="M/Y" className="h-8 text-sm" />
-            </div>
-          </div>
-
-          <Button className="w-full" onClick={handleGenerateLink}>
-            Generate Link
-          </Button>
-
-          {shareLink && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Active Share Link</p>
-              <div className="flex items-center gap-2">
-                <Input
-                  readOnly
-                  value={shareLink}
-                  className="h-8 flex-1 font-mono text-xs"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 shrink-0"
-                  onClick={handleCopyLink}
-                >
-                  <Copy className="size-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="linkForFolder"
-              checked={linkForFolder}
-              onChange={(e) => setLinkForFolder(e.target.checked)}
-              className="size-4 rounded border-input"
-            />
-            <label htmlFor="linkForFolder" className="text-sm">
-              Link for folder
-            </label>
-          </div>
-        </div>
       </div>
 
       <Separator />

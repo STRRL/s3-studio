@@ -1,15 +1,7 @@
 import { Database } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarNav } from "./sidebar-nav";
-import { SidebarUser } from "./sidebar-user";
-import { QuickAccess } from "./quick-access";
-import { StorageUsage } from "./storage-usage";
-import {
-  navigationSections,
-  quickAccessItems,
-  currentUser,
-  storageUsage,
-} from "@/lib/constants";
+import { navigationSections } from "@/lib/constants";
 
 export function Sidebar() {
   return (
@@ -19,7 +11,7 @@ export function Sidebar() {
           <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Database className="size-4" />
           </div>
-          <span className="font-semibold">Storage Console</span>
+          <span className="font-semibold">S3 Studio</span>
         </div>
 
         <ScrollArea className="flex-1 px-3 py-4">
@@ -31,20 +23,9 @@ export function Sidebar() {
               <SidebarNav sections={navigationSections.slice(0, 1)} />
             </div>
 
-            <QuickAccess items={quickAccessItems} />
-
             <SidebarNav sections={navigationSections.slice(1)} />
           </div>
         </ScrollArea>
-
-        <StorageUsage
-          used={storageUsage.used}
-          total={storageUsage.total}
-          unit={storageUsage.unit}
-          percentage={storageUsage.percentage}
-        />
-
-        <SidebarUser user={currentUser} />
       </div>
     </aside>
   );

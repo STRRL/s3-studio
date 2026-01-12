@@ -21,10 +21,9 @@ import type { FileItem } from "@/types/file";
 
 interface FileTableProps {
   files: FileItem[];
-  bucketId: string;
-  currentPath: string[];
   selectedFileId: string | null;
   onSelectFile: (file: FileItem | null) => void;
+  onNavigateToFolder?: (folderName: string) => void;
 }
 
 function getFileIcon(file: FileItem) {
@@ -75,14 +74,14 @@ function formatDate(date: Date) {
 
 export function FileTable({
   files,
-  bucketId,
-  currentPath,
   selectedFileId,
   onSelectFile,
+  onNavigateToFolder,
 }: FileTableProps) {
-  const buildPath = (fileName: string) => {
-    const pathParts = [...currentPath, fileName];
-    return `/buckets/${bucketId}/${pathParts.join("/")}`;
+  const handleFolderClick = (e: React.MouseEvent, folderName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onNavigateToFolder?.(folderName);
   };
 
   return (
@@ -110,14 +109,14 @@ export function FileTable({
             >
               <TableCell>
                 {file.type === "folder" ? (
-                  <a
-                    href={`#${buildPath(file.name)}`}
-                    className="flex items-center gap-3 font-medium hover:underline"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 font-medium hover:underline text-left"
+                    onClick={(e) => handleFolderClick(e, file.name)}
                   >
                     {getFileIcon(file)}
                     {file.name}
-                  </a>
+                  </button>
                 ) : (
                   <div className="flex items-center gap-3 font-medium">
                     {getFileIcon(file)}
