@@ -72,7 +72,7 @@ impl S3Client {
         for entry in items {
             let metadata = entry.metadata();
             let path = entry.path().to_string();
-            let name = path.split('/').last().unwrap_or(&path).to_string();
+            let name = path.trim_end_matches('/').split('/').last().unwrap_or(&path).to_string();
 
             entries.push(FileEntry {
                 path: path.clone(),
@@ -142,7 +142,7 @@ impl S3Client {
 
         let entry = FileEntry {
             path: path.to_string(),
-            name: path.split('/').last().unwrap_or(path).to_string(),
+            name: path.trim_end_matches('/').split('/').last().unwrap_or(path).to_string(),
             size: metadata.content_length(),
             is_dir: metadata.is_dir(),
             last_modified: metadata.last_modified().map(|t| t.to_string()),

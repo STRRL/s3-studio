@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { S3Config, S3ClientWrapper } from '@/lib/types';
+import type { S3Config, S3ClientWrapper, FileEntry } from '@/lib/types';
 import { useWasm } from './use-wasm';
 
 export function useS3Client(config: S3Config | null) {
@@ -27,14 +27,14 @@ export function useS3Client(config: S3Config | null) {
       const wrapper: S3ClientWrapper = {
         list: async (path: string) => {
           const result = await wasmClient.list(path);
-          return result as any[];
+          return result as FileEntry[];
         },
         read: (path: string) => wasmClient.read(path),
         write: (path: string, data: Uint8Array) => wasmClient.write(path, data),
         delete: (path: string) => wasmClient.delete(path),
         stat: async (path: string) => {
           const result = await wasmClient.stat(path);
-          return result as any;
+          return result as FileEntry;
         },
         free: () => wasmClient.free(),
       };

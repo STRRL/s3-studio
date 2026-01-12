@@ -1,16 +1,53 @@
-import { useState, useEffect } from 'react';
-import { CredentialForm } from '@/components/credential-form';
-import { FileList } from '@/components/file-list';
-import { FileUpload } from '@/components/file-upload';
-import { useS3Client } from '@/hooks/use-s3-client';
-import { saveConfig, loadConfig, clearConfig } from '@/lib/storage';
-import type { S3Config, FileEntry } from '@/lib/types';
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { FolderOpen, Loader2, AlertCircle } from "lucide-react";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+import { FileTable } from "@/components/files/file-table";
+import { FileBreadcrumb } from "@/components/files/file-breadcrumb";
+import { FileToolbar } from "@/components/files/file-toolbar";
+import { FilePropertiesPanel } from "@/components/files/file-properties-panel";
+import { EmptyState } from "@/components/shared/empty-state";
+import { CredentialForm } from "@/components/settings/credential-form";
+import { useS3Client } from "@/hooks/use-s3-client";
+import { saveConfig, loadConfig, clearConfig } from "@/lib/storage";
+import type { S3Config, FileEntry } from "@/lib/types";
+import type { FileItem } from "@/types/file";
+
+function convertToFileItem(entry: FileEntry, index: number): FileItem {
+  return {
+    id: `${index}-${entry.path}`,
+    name: entry.name,
+    type: entry.is_dir ? "folder" : "file",
+    size: entry.is_dir ? undefined : formatBytes(entry.size),
+    sizeBytes: entry.size,
+    lastModified: entry.last_modified ? new Date(entry.last_modified) : new Date(),
+    isPublic: false,
+    keyPath: entry.path,
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
 
 export default function App() {
   const [config, setConfig] = useState<S3Config | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const { client, loading, error } = useS3Client(config);
+  const [currentPath, setCurrentPath] = useState<string[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [searchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+
+  const { client, loading: clientLoading, error: clientError } = useS3Client(config);
 
   useEffect(() => {
     const stored = loadConfig();
@@ -21,163 +58,175 @@ export default function App() {
     }
   }, []);
 
-  function handleConfigSubmit(newConfig: S3Config) {
+  const fetchFiles = useCallback(async () => {
+    if (!client) return;
+
+    setListLoading(true);
+    setListError(null);
+
+    try {
+      const path = currentPath.length > 0 ? currentPath.join("/") + "/" : "/";
+      const entries = await client.list(path);
+      const fileItems = entries.map((entry, index) => convertToFileItem(entry, index));
+      setFiles(fileItems);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to list files");
+      setFiles([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [client, currentPath]);
+
+  useEffect(() => {
+    if (client) {
+      fetchFiles();
+    }
+  }, [client, fetchFiles]);
+
+  const handleConfigSubmit = (newConfig: S3Config) => {
     saveConfig(newConfig);
     setConfig(newConfig);
     setShowConfig(false);
-  }
+    setCurrentPath([]);
+  };
 
-  function handleDisconnect() {
+  const handleDisconnect = () => {
     clearConfig();
     setConfig(null);
     setShowConfig(true);
-  }
+    setFiles([]);
+    setSelectedFile(null);
+  };
 
-  async function handleDownload(file: FileEntry) {
-    if (!client) return;
+  const handleNavigateToFolder = (folderName: string) => {
+    setCurrentPath((prev) => [...prev, folderName]);
+    setSelectedFile(null);
+  };
 
-    try {
-      const data = await client.read(file.path);
-      const blob = new Blob([new Uint8Array(data)]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert(`Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  const handleNavigateTo = (pathIndex: number) => {
+    if (pathIndex < 0) {
+      setCurrentPath([]);
+    } else {
+      setCurrentPath((prev) => prev.slice(0, pathIndex + 1));
     }
-  }
+    setSelectedFile(null);
+  };
 
-  async function handleDelete(file: FileEntry) {
-    if (!client) return;
+  const getBreadcrumbs = (): { label: string; href?: string }[] => {
+    if (!config) return [{ label: "S3 Studio" }];
 
-    if (!confirm(`Are you sure you want to delete "${file.name}"?`)) {
-      return;
+    const crumbs: { label: string; href?: string }[] = [{ label: config.bucket, href: "#" }];
+    currentPath.forEach((segment, index) => {
+      crumbs.push({
+        label: segment,
+        href: index === currentPath.length - 1 ? undefined : "#",
+      });
+    });
+    return crumbs;
+  };
+
+  const filteredFiles = files.filter((file) =>
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleLoadPreview = useCallback(async (path: string): Promise<Uint8Array> => {
+    if (!client) {
+      throw new Error("No client available");
     }
-
-    try {
-      await client.delete(file.path);
-      setRefreshKey((prev) => prev + 1);
-    } catch (err) {
-      alert(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  }
-
-  function handleUploadComplete() {
-    setRefreshKey((prev) => prev + 1);
-  }
+    return client.read(path);
+  }, [client]);
 
   if (showConfig || !config) {
     return (
-      <main className="min-h-screen bg-gray-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">S3 Studio</h1>
-            <p className="text-gray-600">WebAssembly-powered S3 file browser</p>
-          </div>
-          <CredentialForm onSubmit={handleConfigSubmit} initialConfig={config} />
-        </div>
-      </main>
+      <CredentialForm
+        initialConfig={config}
+        onSubmit={handleConfigSubmit}
+        onCancel={config ? () => setShowConfig(false) : undefined}
+      />
     );
   }
 
+  const isLoading = clientLoading || listLoading;
+  const error = clientError || (listError ? new Error(listError) : null);
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">S3 Studio</h1>
-              <p className="text-sm text-gray-600">
-                Bucket: <span className="font-mono">{config.bucket}</span> | Region: {config.region}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowConfig(true)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm"
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleDisconnect}
-                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md text-sm"
-              >
-                Disconnect
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="flex h-screen bg-background">
+      <Sidebar />
 
-      <div className="container mx-auto px-4 py-8">
-        {loading && !client && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Connecting to S3...</p>
-          </div>
-        )}
+      <div className="ml-60 flex flex-1 flex-col overflow-hidden">
+        <Header breadcrumbs={getBreadcrumbs()} />
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-            <h3 className="text-red-800 font-semibold mb-2">Connection failed</h3>
-            <p className="text-red-600 text-sm mb-3">{error.message}</p>
-            <button
-              onClick={() => setShowConfig(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
-            >
-              Reconfigure
-            </button>
-          </div>
-        )}
+        <main className="flex flex-1 overflow-hidden">
+          <div className="flex-1 overflow-auto p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <FileBreadcrumb bucketId={config.bucket} path={currentPath} onNavigateTo={handleNavigateTo} />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowConfig(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Settings
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    className="text-sm text-destructive hover:text-destructive/80"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
 
-        {client && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Upload Files</h2>
-              <FileUpload
-                client={client}
-                currentPath="/"
-                onUploadComplete={handleUploadComplete}
-              />
-            </div>
+              <FileToolbar viewMode={viewMode} onViewModeChange={setViewMode} />
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">File List</h2>
-              <FileList
-                key={refreshKey}
-                client={client}
-                onDownload={handleDownload}
-                onDelete={handleDelete}
-              />
+              {isLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="size-4" />
+                    <span className="font-medium">Error</span>
+                  </div>
+                  <p className="mt-1 text-sm text-destructive">{error.message}</p>
+                </div>
+              )}
+
+              {!isLoading && !error && filteredFiles.length > 0 && (
+                <FileTable
+                  files={filteredFiles}
+                  selectedFileId={selectedFile?.id ?? null}
+                  onSelectFile={setSelectedFile}
+                  onNavigateToFolder={handleNavigateToFolder}
+                />
+              )}
+
+              {!isLoading && !error && filteredFiles.length === 0 && (
+                <EmptyState
+                  icon={FolderOpen}
+                  title="No files"
+                  description={
+                    searchQuery
+                      ? "No files match your search."
+                      : "This folder is empty. Upload some files to get started."
+                  }
+                />
+              )}
             </div>
           </div>
-        )}
+
+          {selectedFile && (
+            <FilePropertiesPanel
+              file={selectedFile}
+              onClose={() => setSelectedFile(null)}
+              onLoadPreview={handleLoadPreview}
+            />
+          )}
+        </main>
       </div>
-
-      <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-600">
-          <p>
-            Your credentials stay in the browser and are never sent to any server.
-          </p>
-          <p className="mt-2">
-            Built with{' '}
-            <a
-              href="https://opendal.apache.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              Apache OpenDAL
-            </a>{' '}
-            and WebAssembly
-          </p>
-        </div>
-      </footer>
-    </main>
+    </div>
   );
 }
