@@ -42,8 +42,8 @@ next-env.d.ts
 target/
 **/*.rs.bk
 Cargo.lock
-# Allow pre-built WASM package for CI/CD
-!packages/opendal-wasm/pkg/
+pkg/
+*.wasm
 
 # IDE
 .vscode/
