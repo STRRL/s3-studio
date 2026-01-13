@@ -1,4 +1,5 @@
 "use client";
+import { useState, useRef, useEffect } from "react";
 import {
   Folder,
   File,
@@ -6,6 +7,7 @@ import {
   FileText,
   FileArchive,
   MoreHorizontal,
+  Pencil,
 } from "lucide-react";
 import {
   Table,
@@ -15,7 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { FileItem } from "@/types/file";
 
@@ -24,6 +33,10 @@ interface FileTableProps {
   selectedFileId: string | null;
   onSelectFile: (file: FileItem | null) => void;
   onNavigateToFolder?: (folderName: string) => void;
+  editingFileId: string | null;
+  onStartRename: (file: FileItem) => void;
+  onConfirmRename: (file: FileItem, newName: string) => void;
+  onCancelRename: () => void;
 }
 
 function getFileIcon(file: FileItem) {
@@ -77,11 +90,30 @@ export function FileTable({
   selectedFileId,
   onSelectFile,
   onNavigateToFolder,
+  editingFileId,
+  onStartRename,
+  onConfirmRename,
+  onCancelRename,
 }: FileTableProps) {
+  const [editingName, setEditingName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingFileId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingFileId]);
+
   const handleFolderClick = (e: React.MouseEvent, folderName: string) => {
     e.preventDefault();
     e.stopPropagation();
     onNavigateToFolder?.(folderName);
+  };
+
+  const handleStartRename = (file: FileItem) => {
+    setEditingName(file.name);
+    onStartRename(file);
   };
 
   return (
@@ -108,7 +140,28 @@ export function FileTable({
               }
             >
               <TableCell>
-                {file.type === "folder" ? (
+                {editingFileId === file.id ? (
+                  <div className="flex items-center gap-3">
+                    {getFileIcon(file)}
+                    <Input
+                      ref={inputRef}
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          onConfirmRename(file, editingName);
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
+                          onCancelRename();
+                        }
+                      }}
+                      onBlur={() => onCancelRename()}
+                      className="h-7 w-64"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                ) : file.type === "folder" ? (
                   <button
                     type="button"
                     className="flex items-center gap-3 font-medium hover:underline text-left"
@@ -131,17 +184,29 @@ export function FileTable({
                 {file.size || "—"}
               </TableCell>
               <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectFile(file);
-                  }}
-                >
-                  <MoreHorizontal className="size-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartRename(file);
+                      }}
+                    >
+                      <Pencil className="mr-2 size-4" />
+                      Rename
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

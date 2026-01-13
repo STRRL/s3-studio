@@ -151,6 +151,20 @@ impl S3Client {
         serde_wasm_bindgen::to_value(&entry)
             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
+
+    #[wasm_bindgen]
+    pub async fn rename(&self, from: &str, to: &str) -> Result<(), JsValue> {
+        log(&format!("Renaming: {} -> {}", from, to));
+
+        self.operator
+            .rename(from, to)
+            .await
+            .map_err(|e| JsValue::from_str(&format!("Failed to rename: {}", e)))?;
+
+        log("Rename successful");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -36,6 +36,7 @@ export function useS3Client(config: S3Config | null) {
           const result = await wasmClient.stat(path);
           return result as FileEntry;
         },
+        rename: (from: string, to: string) => wasmClient.rename(from, to),
         free: () => wasmClient.free(),
       };
 

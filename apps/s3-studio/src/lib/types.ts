@@ -21,5 +21,6 @@ export interface S3ClientWrapper {
   write: (path: string, data: Uint8Array) => Promise<void>;
   delete: (path: string) => Promise<void>;
   stat: (path: string) => Promise<FileEntry>;
+  rename: (from: string, to: string) => Promise<void>;
   free: () => void;
 }
