@@ -10,8 +10,13 @@ import { FileToolbar } from "@/components/files/file-toolbar";
 import { FilePropertiesPanel } from "@/components/files/file-properties-panel";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ProfileFormModal } from "@/components/profiles/profile-form-modal";
+import { RenameDialog } from "@/components/files/rename-dialog";
+import { NewFolderDialog } from "@/components/files/new-folder-dialog";
+import { DeleteConfirmDialog } from "@/components/files/delete-confirm-dialog";
 import { useS3Client } from "@/hooks/use-s3-client";
 import { useProfileStore } from "@/stores/profile-store";
+import { useFileActions } from "@/hooks/use-file-actions";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { S3Config, FileEntry } from "@/lib/types";
 import type { FileItem } from "@/types/file";
 
@@ -56,10 +61,15 @@ export default function App() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
-  const [editingFileId, setEditingFileId] = useState<string | null>(null);
 
   const config = getActiveConfig();
   const prevActiveProfileIdRef = useRef(activeProfileId);
+
+  const [renameDialogFile, setRenameDialogFile] = useState<FileItem | null>(null);
+  const [deleteDialogFile, setDeleteDialogFile] = useState<FileItem | null>(null);
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { client, loading: clientLoading, error: clientError } = useS3Client(config);
 
@@ -139,10 +149,10 @@ export default function App() {
     setSelectedFile(null);
   };
 
-  const handleNavigateToFolder = (folderName: string) => {
+  const handleNavigateToFolder = useCallback((folderName: string) => {
     setCurrentPath((prev) => [...prev, folderName]);
     setSelectedFile(null);
-  };
+  }, []);
 
   const handleNavigateTo = (pathIndex: number) => {
     if (pathIndex < 0) {
@@ -177,40 +187,54 @@ export default function App() {
     return client.read(path);
   }, [client]);
 
-  const handleStartRename = useCallback((file: FileItem) => {
-    setEditingFileId(file.id);
+  const actions = useFileActions({
+    client,
+    bucket: config?.bucket || "",
+    currentPath,
+    onRefresh: fetchFiles,
+    onNavigateToFolder: handleNavigateToFolder,
+  });
+
+  const handleRenameRequest = useCallback((file: FileItem) => {
+    setRenameDialogFile(file);
   }, []);
 
-  const handleCancelRename = useCallback(() => {
-    setEditingFileId(null);
+  const handleDeleteRequest = useCallback((file: FileItem) => {
+    setDeleteDialogFile(file);
   }, []);
 
-  const handleConfirmRename = useCallback(async (file: FileItem, newName: string) => {
-    if (!client) return;
+  const handleUploadRequest = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
-    const trimmedName = newName.trim();
+  const handleNewFolderRequest = useCallback(() => {
+    setNewFolderDialogOpen(true);
+  }, []);
 
-    if (!trimmedName || trimmedName === file.name) {
-      setEditingFileId(null);
-      return;
-    }
+  const handleFileInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const uploadedFiles = e.target.files;
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        try {
+          await actions.uploadFiles(uploadedFiles);
+        } catch (err) {
+          console.error("Upload failed:", err);
+        }
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [actions]
+  );
 
-    if (trimmedName.includes("/") || trimmedName.includes("\\")) {
-      alert("File name cannot contain / or \\");
-      return;
-    }
-
-    try {
-      const parentPath = file.keyPath.substring(0, file.keyPath.lastIndexOf(file.name));
-      const newPath = parentPath + trimmedName + (file.type === "folder" ? "/" : "");
-
-      await client.rename(file.keyPath, newPath);
-      setEditingFileId(null);
-      await fetchFiles();
-    } catch (err) {
-      alert(`Rename failed: ${err instanceof Error ? err.message : "Unknown error"}`);
-    }
-  }, [client, fetchFiles]);
+  useKeyboardShortcuts({
+    enabled: !!client && !!config,
+    selectedFile,
+    actions,
+    onRenameRequest: handleRenameRequest,
+    onDeleteRequest: handleDeleteRequest,
+  });
 
   const editingProfile = editingProfileId ? profiles[editingProfileId] : null;
 
@@ -260,7 +284,13 @@ export default function App() {
                   </div>
                 </div>
 
-                <FileToolbar viewMode={viewMode} onViewModeChange={setViewMode} />
+                <FileToolbar
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  onUpload={handleUploadRequest}
+                  onNewFolder={handleNewFolderRequest}
+                  onRefresh={fetchFiles}
+                />
 
                 {isLoading && (
                   <div className="flex items-center justify-center py-12">
@@ -284,10 +314,11 @@ export default function App() {
                     selectedFileId={selectedFile?.id ?? null}
                     onSelectFile={setSelectedFile}
                     onNavigateToFolder={handleNavigateToFolder}
-                    editingFileId={editingFileId}
-                    onStartRename={handleStartRename}
-                    onConfirmRename={handleConfirmRename}
-                    onCancelRename={handleCancelRename}
+                    actions={actions}
+                    onRenameRequest={handleRenameRequest}
+                    onDeleteRequest={handleDeleteRequest}
+                    onUploadRequest={handleUploadRequest}
+                    onNewFolderRequest={handleNewFolderRequest}
                   />
                 )}
 
@@ -311,10 +342,45 @@ export default function App() {
               file={selectedFile}
               onClose={() => setSelectedFile(null)}
               onLoadPreview={handleLoadPreview}
+              onDownload={() => actions.downloadFile(selectedFile)}
+              onDelete={() => handleDeleteRequest(selectedFile)}
+              onRename={() => handleRenameRequest(selectedFile)}
             />
           )}
         </main>
       </div>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        multiple
+        onChange={handleFileInputChange}
+      />
+
+      <RenameDialog
+        open={!!renameDialogFile}
+        file={renameDialogFile}
+        onRename={actions.renameFile}
+        onOpenChange={(open) => {
+          if (!open) setRenameDialogFile(null);
+        }}
+      />
+
+      <NewFolderDialog
+        open={newFolderDialogOpen}
+        onCreate={actions.createFolder}
+        onOpenChange={setNewFolderDialogOpen}
+      />
+
+      <DeleteConfirmDialog
+        open={!!deleteDialogFile}
+        file={deleteDialogFile}
+        onDelete={actions.deleteFile}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDialogFile(null);
+        }}
+      />
     </div>
   );
 }

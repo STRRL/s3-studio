@@ -5,6 +5,7 @@ import {
   X,
   Download,
   Trash2,
+  Pencil,
   FileText,
   FileImage,
   File,
@@ -25,6 +26,9 @@ interface FilePropertiesPanelProps {
   file: FileItem | null;
   onClose: () => void;
   onLoadPreview?: (path: string) => Promise<Uint8Array>;
+  onDownload?: () => void;
+  onDelete?: () => void;
+  onRename?: () => void;
 }
 
 function getPreviewIcon(file: FileItem) {
@@ -79,6 +83,9 @@ export function FilePropertiesPanel({
   file,
   onClose,
   onLoadPreview,
+  onDownload,
+  onDelete,
+  onRename,
 }: FilePropertiesPanelProps) {
   const [previewData, setPreviewData] = useState<Uint8Array | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -172,6 +179,8 @@ export function FilePropertiesPanel({
     }
   };
 
+  const isFolder = file.type === "folder";
+
   return (
     <div className="flex h-full w-96 flex-col border-l bg-background">
       <div className="flex items-center justify-between border-b p-4">
@@ -232,21 +241,25 @@ export function FilePropertiesPanel({
 
       <div className="p-4">
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1">
-            <Download className="mr-2 size-4" />
-            Download
+          {!isFolder && (
+            <Button variant="outline" className="flex-1" onClick={onDownload}>
+              <Download className="mr-2 size-4" />
+              Download
+            </Button>
+          )}
+          <Button variant="outline" size="icon" onClick={onRename} title="Rename">
+            <Pencil className="size-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
             className="text-destructive hover:text-destructive"
+            onClick={onDelete}
+            title="Delete"
           >
             <Trash2 className="size-4" />
           </Button>
         </div>
-        <Button variant="destructive" className="mt-2 w-full">
-          Delete File
-        </Button>
       </div>
     </div>
   );
