@@ -10,10 +10,15 @@ import {
   File,
   Folder,
   Loader2,
+  Music,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { FilePreviewDispatcher } from "./preview";
+import { getFileTypeInfo, canPreviewFile } from "@/lib/file-types";
+import { cn } from "@/lib/utils";
 import type { FileItem } from "@/types/file";
 
 interface FilePropertiesPanelProps {
@@ -22,32 +27,31 @@ interface FilePropertiesPanelProps {
   onLoadPreview?: (path: string) => Promise<Uint8Array>;
 }
 
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"];
-
-function isImageFile(file: FileItem): boolean {
-  const ext = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
-  return IMAGE_EXTENSIONS.includes(ext);
-}
-
 function getPreviewIcon(file: FileItem) {
   if (file.type === "folder") {
     return <Folder className="size-16 text-blue-500" />;
   }
-  const mimeType = file.mimeType || "";
-  if (mimeType.startsWith("image/") || isImageFile(file)) {
-    return <FileImage className="size-16 text-emerald-500" />;
+
+  const { previewType } = getFileTypeInfo(file.name);
+
+  switch (previewType) {
+    case "image":
+      return <FileImage className="size-16 text-emerald-500" />;
+    case "pdf":
+      return (
+        <div className="flex size-16 items-center justify-center rounded bg-red-100">
+          <span className="text-sm font-bold text-red-600">PDF</span>
+        </div>
+      );
+    case "text":
+      return <FileText className="size-16 text-blue-500" />;
+    case "video":
+      return <Video className="size-16 text-purple-500" />;
+    case "audio":
+      return <Music className="size-16 text-orange-500" />;
+    default:
+      return <File className="size-16 text-slate-400" />;
   }
-  if (mimeType.includes("pdf")) {
-    return (
-      <div className="flex size-16 items-center justify-center rounded bg-red-100">
-        <span className="text-sm font-bold text-red-600">PDF</span>
-      </div>
-    );
-  }
-  if (mimeType.includes("text") || mimeType.includes("markdown")) {
-    return <FileText className="size-16 text-blue-500" />;
-  }
-  return <File className="size-16 text-slate-400" />;
 }
 
 function PropertyRow({
@@ -71,14 +75,18 @@ function PropertyRow({
   );
 }
 
-export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FilePropertiesPanelProps) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+export function FilePropertiesPanel({
+  file,
+  onClose,
+  onLoadPreview,
+}: FilePropertiesPanelProps) {
+  const [previewData, setPreviewData] = useState<Uint8Array | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!file || file.type === "folder" || !onLoadPreview || !isImageFile(file)) {
-      setPreviewUrl(null);
+    if (!file || file.type === "folder" || !onLoadPreview || !canPreviewFile(file.name)) {
+      setPreviewData(null);
       setPreviewError(null);
       return;
     }
@@ -90,19 +98,7 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
     onLoadPreview(file.keyPath)
       .then((data) => {
         if (cancelled) return;
-        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
-        let mimeType = "image/png";
-        if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
-        else if (ext === ".gif") mimeType = "image/gif";
-        else if (ext === ".webp") mimeType = "image/webp";
-        else if (ext === ".svg") mimeType = "image/svg+xml";
-        else if (ext === ".bmp") mimeType = "image/bmp";
-        else if (ext === ".ico") mimeType = "image/x-icon";
-
-        const arrayBuffer = new Uint8Array(data).buffer;
-        const blob = new Blob([arrayBuffer], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
+        setPreviewData(data);
         setPreviewLoading(false);
       })
       .catch((err) => {
@@ -113,42 +109,67 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
 
     return () => {
       cancelled = true;
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
     };
   }, [file?.keyPath, file?.type, file?.name, onLoadPreview]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
   if (!file) return null;
+
+  const typeInfo = getFileTypeInfo(file.name);
 
   const renderPreview = () => {
     if (previewLoading) {
       return (
-        <div className="flex items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
       );
     }
 
-    if (previewUrl && !previewError) {
+    if (previewError) {
       return (
-        <img
-          src={previewUrl}
-          alt={file.name}
-          className="max-h-full max-w-full object-contain rounded"
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+          {getPreviewIcon(file)}
+          <p className="text-sm">Failed to load preview</p>
+        </div>
+      );
+    }
+
+    if (previewData) {
+      return (
+        <FilePreviewDispatcher
+          file={file}
+          data={previewData}
+          onError={(err) => setPreviewError(err.message)}
         />
       );
     }
 
-    return getPreviewIcon(file);
+    return (
+      <div className="flex h-full items-center justify-center">
+        {getPreviewIcon(file)}
+      </div>
+    );
+  };
+
+  const getPreviewContainerClass = () => {
+    if (file.type === "folder" || !canPreviewFile(file.name)) {
+      return "aspect-square";
+    }
+
+    switch (typeInfo.previewType) {
+      case "image":
+        return "aspect-square";
+      case "text":
+        return "h-64";
+      case "pdf":
+        return "h-80";
+      case "video":
+        return "aspect-video";
+      case "audio":
+        return "h-40";
+      default:
+        return "aspect-square";
+    }
   };
 
   return (
@@ -161,7 +182,12 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="mb-6 flex aspect-square items-center justify-center rounded-lg bg-muted">
+        <div
+          className={cn(
+            "mb-6 overflow-hidden rounded-lg bg-muted",
+            getPreviewContainerClass()
+          )}
+        >
           {renderPreview()}
         </div>
 
@@ -170,7 +196,10 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
 
           <div className="grid grid-cols-2 gap-4">
             <PropertyRow label="Size" value={file.size || "—"} />
-            <PropertyRow label="Type" value={file.mimeType?.split("/")[1]?.toUpperCase() || "—"} />
+            <PropertyRow
+              label="Type"
+              value={file.mimeType?.split("/")[1]?.toUpperCase() || "—"}
+            />
           </div>
 
           <div>
@@ -181,8 +210,8 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
               variant="outline"
               className={
                 file.isPublic
-                  ? "mt-1 bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "mt-1 bg-slate-100 text-slate-700 border-slate-200"
+                  ? "mt-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "mt-1 border-slate-200 bg-slate-100 text-slate-700"
               }
             >
               {file.isPublic ? "Public" : "Restricted"}
@@ -195,11 +224,8 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
             <PropertyRow label="Storage Class" value={file.storageClass} />
           )}
 
-          {file.etag && (
-            <PropertyRow label="ETag" value={file.etag} mono />
-          )}
+          {file.etag && <PropertyRow label="ETag" value={file.etag} mono />}
         </div>
-
       </div>
 
       <Separator />
@@ -210,14 +236,15 @@ export function FilePropertiesPanel({ file, onClose, onLoadPreview }: FileProper
             <Download className="mr-2 size-4" />
             Download
           </Button>
-          <Button variant="outline" size="icon" className="text-destructive hover:text-destructive">
+          <Button
+            variant="outline"
+            size="icon"
+            className="text-destructive hover:text-destructive"
+          >
             <Trash2 className="size-4" />
           </Button>
         </div>
-        <Button
-          variant="destructive"
-          className="mt-2 w-full"
-        >
+        <Button variant="destructive" className="mt-2 w-full">
           Delete File
         </Button>
       </div>

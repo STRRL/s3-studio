@@ -17,5 +17,13 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'preview-shiki': ['shiki'],
+          'preview-pdf': ['react-pdf'],
+        },
+      },
+    },
   },
 });
