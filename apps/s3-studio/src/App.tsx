@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { FolderOpen, Loader2, AlertCircle } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -9,9 +9,9 @@ import { FileBreadcrumb } from "@/components/files/file-breadcrumb";
 import { FileToolbar } from "@/components/files/file-toolbar";
 import { FilePropertiesPanel } from "@/components/files/file-properties-panel";
 import { EmptyState } from "@/components/shared/empty-state";
-import { CredentialForm } from "@/components/settings/credential-form";
+import { ProfileFormModal } from "@/components/profiles/profile-form-modal";
 import { useS3Client } from "@/hooks/use-s3-client";
-import { saveConfig, loadConfig, clearConfig } from "@/lib/storage";
+import { useProfileStore } from "@/stores/profile-store";
 import type { S3Config, FileEntry } from "@/lib/types";
 import type { FileItem } from "@/types/file";
 
@@ -37,8 +37,18 @@ function formatBytes(bytes: number): string {
 }
 
 export default function App() {
-  const [config, setConfig] = useState<S3Config | null>(null);
-  const [showConfig, setShowConfig] = useState(false);
+  const {
+    profiles,
+    activeProfileId,
+    addProfile,
+    updateProfile,
+    deleteProfile,
+    setActiveProfile,
+    getActiveConfig,
+  } = useProfileStore();
+
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
@@ -47,16 +57,28 @@ export default function App() {
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
+  const config = getActiveConfig();
+  const prevActiveProfileIdRef = useRef(activeProfileId);
+
   const { client, loading: clientLoading, error: clientError } = useS3Client(config);
 
+  const hasProfiles = Object.keys(profiles).length > 0;
+
   useEffect(() => {
-    const stored = loadConfig();
-    if (stored) {
-      setConfig(stored);
-    } else {
-      setShowConfig(true);
+    if (!hasProfiles) {
+      setProfileModalOpen(true);
     }
-  }, []);
+  }, [hasProfiles]);
+
+  useEffect(() => {
+    if (prevActiveProfileIdRef.current !== activeProfileId) {
+      setCurrentPath([]);
+      setFiles([]);
+      setSelectedFile(null);
+      setListError(null);
+      prevActiveProfileIdRef.current = activeProfileId;
+    }
+  }, [activeProfileId]);
 
   const fetchFiles = useCallback(async () => {
     if (!client) return;
@@ -83,17 +105,35 @@ export default function App() {
     }
   }, [client, fetchFiles]);
 
-  const handleConfigSubmit = (newConfig: S3Config) => {
-    saveConfig(newConfig);
-    setConfig(newConfig);
-    setShowConfig(false);
+  const handleAddProfile = () => {
+    setEditingProfileId(null);
+    setProfileModalOpen(true);
+  };
+
+  const handleEditProfile = (profileId: string) => {
+    setEditingProfileId(profileId);
+    setProfileModalOpen(true);
+  };
+
+  const handleProfileSubmit = (name: string, newConfig: S3Config) => {
+    if (editingProfileId) {
+      updateProfile(editingProfileId, { name, ...newConfig });
+    } else {
+      const profile = addProfile(name, newConfig);
+      setActiveProfile(profile.id);
+    }
     setCurrentPath([]);
   };
 
+  const handleProfileDelete = () => {
+    if (editingProfileId) {
+      deleteProfile(editingProfileId);
+      setEditingProfileId(null);
+    }
+  };
+
   const handleDisconnect = () => {
-    clearConfig();
-    setConfig(null);
-    setShowConfig(true);
+    setActiveProfile(null);
     setFiles([]);
     setSelectedFile(null);
   };
@@ -136,86 +176,94 @@ export default function App() {
     return client.read(path);
   }, [client]);
 
-  if (showConfig || !config) {
-    return (
-      <CredentialForm
-        initialConfig={config}
-        onSubmit={handleConfigSubmit}
-        onCancel={config ? () => setShowConfig(false) : undefined}
-      />
-    );
-  }
+  const editingProfile = editingProfileId ? profiles[editingProfileId] : null;
 
   const isLoading = clientLoading || listLoading;
   const error = clientError || (listError ? new Error(listError) : null);
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} />
+
+      <ProfileFormModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        editingProfile={editingProfile}
+        onSubmit={handleProfileSubmit}
+        onDelete={editingProfileId ? handleProfileDelete : undefined}
+      />
 
       <div className="ml-60 flex flex-1 flex-col overflow-hidden">
         <Header breadcrumbs={getBreadcrumbs()} />
 
         <main className="flex flex-1 overflow-hidden">
           <div className="flex-1 overflow-auto p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FileBreadcrumb bucketId={config.bucket} path={currentPath} onNavigateTo={handleNavigateTo} />
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowConfig(true)}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Settings
-                  </button>
-                  <button
-                    onClick={handleDisconnect}
-                    className="text-sm text-destructive hover:text-destructive/80"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-
-              <FileToolbar viewMode={viewMode} onViewModeChange={setViewMode} />
-
-              {isLoading && (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="size-8 animate-spin text-muted-foreground" />
-                </div>
-              )}
-
-              {error && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="size-4" />
-                    <span className="font-medium">Error</span>
+            {!config ? (
+              <EmptyState
+                icon={FolderOpen}
+                title="No connection selected"
+                description="Select a connection from the sidebar or add a new one to get started."
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FileBreadcrumb bucketId={config.bucket} path={currentPath} onNavigateTo={handleNavigateTo} />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditProfile(activeProfileId!)}
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      Settings
+                    </button>
+                    <button
+                      onClick={handleDisconnect}
+                      className="text-sm text-destructive hover:text-destructive/80"
+                    >
+                      Disconnect
+                    </button>
                   </div>
-                  <p className="mt-1 text-sm text-destructive">{error.message}</p>
                 </div>
-              )}
 
-              {!isLoading && !error && filteredFiles.length > 0 && (
-                <FileTable
-                  files={filteredFiles}
-                  selectedFileId={selectedFile?.id ?? null}
-                  onSelectFile={setSelectedFile}
-                  onNavigateToFolder={handleNavigateToFolder}
-                />
-              )}
+                <FileToolbar viewMode={viewMode} onViewModeChange={setViewMode} />
 
-              {!isLoading && !error && filteredFiles.length === 0 && (
-                <EmptyState
-                  icon={FolderOpen}
-                  title="No files"
-                  description={
-                    searchQuery
-                      ? "No files match your search."
-                      : "This folder is empty. Upload some files to get started."
-                  }
-                />
-              )}
-            </div>
+                {isLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {error && (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="size-4" />
+                      <span className="font-medium">Error</span>
+                    </div>
+                    <p className="mt-1 text-sm text-destructive">{error.message}</p>
+                  </div>
+                )}
+
+                {!isLoading && !error && filteredFiles.length > 0 && (
+                  <FileTable
+                    files={filteredFiles}
+                    selectedFileId={selectedFile?.id ?? null}
+                    onSelectFile={setSelectedFile}
+                    onNavigateToFolder={handleNavigateToFolder}
+                  />
+                )}
+
+                {!isLoading && !error && filteredFiles.length === 0 && (
+                  <EmptyState
+                    icon={FolderOpen}
+                    title="No files"
+                    description={
+                      searchQuery
+                        ? "No files match your search."
+                        : "This folder is empty. Upload some files to get started."
+                    }
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {selectedFile && (

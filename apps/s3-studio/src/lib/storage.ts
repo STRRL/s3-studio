@@ -1,6 +1,11 @@
 import type { S3Config } from './types';
 
 const STORAGE_KEY = 's3-studio-config';
+export const LEGACY_STORAGE_KEY = STORAGE_KEY;
+
+export function generateProfileId(): string {
+  return crypto.randomUUID();
+}
 
 export function saveConfig(config: S3Config): void {
   if (typeof window === 'undefined') return;
