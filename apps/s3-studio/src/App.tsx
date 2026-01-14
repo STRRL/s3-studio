@@ -193,7 +193,7 @@ export default function App() {
         onDelete={editingProfileId ? handleProfileDelete : undefined}
       />
 
-      <div className="ml-60 flex flex-1 flex-col overflow-hidden">
+      <div className="ml-64 flex flex-1 flex-col overflow-hidden">
         <Header breadcrumbs={getBreadcrumbs()} />
 
         <main className="flex flex-1 overflow-hidden">
