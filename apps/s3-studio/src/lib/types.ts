@@ -24,3 +24,25 @@ export interface S3ClientWrapper {
   rename: (from: string, to: string) => Promise<void>;
   free: () => void;
 }
+
+export interface S3Profile {
+  id: string;
+  name: string;
+  config: S3Config;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileStore {
+  profiles: Record<string, S3Profile>;
+  profileOrder: string[];
+  activeProfileId: string | null;
+}
+
+export type ConnectionStatus = 'idle' | 'testing' | 'success' | 'error';
+
+export interface ConnectionTestResult {
+  status: ConnectionStatus;
+  message?: string;
+  testedAt?: string;
+}
