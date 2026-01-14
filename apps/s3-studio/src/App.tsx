@@ -56,6 +56,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
 
   const config = getActiveConfig();
   const prevActiveProfileIdRef = useRef(activeProfileId);
@@ -176,6 +177,41 @@ export default function App() {
     return client.read(path);
   }, [client]);
 
+  const handleStartRename = useCallback((file: FileItem) => {
+    setEditingFileId(file.id);
+  }, []);
+
+  const handleCancelRename = useCallback(() => {
+    setEditingFileId(null);
+  }, []);
+
+  const handleConfirmRename = useCallback(async (file: FileItem, newName: string) => {
+    if (!client) return;
+
+    const trimmedName = newName.trim();
+
+    if (!trimmedName || trimmedName === file.name) {
+      setEditingFileId(null);
+      return;
+    }
+
+    if (trimmedName.includes("/") || trimmedName.includes("\\")) {
+      alert("File name cannot contain / or \\");
+      return;
+    }
+
+    try {
+      const parentPath = file.keyPath.substring(0, file.keyPath.lastIndexOf(file.name));
+      const newPath = parentPath + trimmedName + (file.type === "folder" ? "/" : "");
+
+      await client.rename(file.keyPath, newPath);
+      setEditingFileId(null);
+      await fetchFiles();
+    } catch (err) {
+      alert(`Rename failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  }, [client, fetchFiles]);
+
   const editingProfile = editingProfileId ? profiles[editingProfileId] : null;
 
   const isLoading = clientLoading || listLoading;
@@ -248,6 +284,10 @@ export default function App() {
                     selectedFileId={selectedFile?.id ?? null}
                     onSelectFile={setSelectedFile}
                     onNavigateToFolder={handleNavigateToFolder}
+                    editingFileId={editingFileId}
+                    onStartRename={handleStartRename}
+                    onConfirmRename={handleConfirmRename}
+                    onCancelRename={handleCancelRename}
                   />
                 )}
 
