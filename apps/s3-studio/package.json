@@ -26,6 +26,8 @@
     "lucide-react": "^0.546.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-pdf": "^10.3.0",
+    "shiki": "^3.21.0",
     "tailwind-merge": "^3.3.1",
     "zustand": "^5.0.2"
   },
@@ -43,8 +45,8 @@
     "typescript": "^5",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.7",
-    "vite-plugin-wasm": "^3.3.0",
     "vite-plugin-top-level-await": "^1.4.4",
+    "vite-plugin-wasm": "^3.3.0",
     "wrangler": "^3.99.0"
   }
 }
