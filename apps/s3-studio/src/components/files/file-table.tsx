@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+
 import {
   Folder,
   File,
@@ -7,7 +7,6 @@ import {
   FileText,
   FileArchive,
   MoreHorizontal,
-  Pencil,
 } from "lucide-react";
 import {
   Table,
@@ -17,26 +16,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { FileContextMenu } from "@/components/files/file-context-menu";
 import type { FileItem } from "@/types/file";
+import type { FileActions } from "@/hooks/use-file-actions";
 
 interface FileTableProps {
   files: FileItem[];
   selectedFileId: string | null;
   onSelectFile: (file: FileItem | null) => void;
   onNavigateToFolder?: (folderName: string) => void;
-  editingFileId: string | null;
-  onStartRename: (file: FileItem) => void;
-  onConfirmRename: (file: FileItem, newName: string) => void;
-  onCancelRename: () => void;
+  actions?: FileActions;
+  onRenameRequest?: (file: FileItem) => void;
+  onDeleteRequest?: (file: FileItem) => void;
+  onUploadRequest?: () => void;
+  onNewFolderRequest?: () => void;
 }
 
 function getFileIcon(file: FileItem) {
@@ -90,33 +85,19 @@ export function FileTable({
   selectedFileId,
   onSelectFile,
   onNavigateToFolder,
-  editingFileId,
-  onStartRename,
-  onConfirmRename,
-  onCancelRename,
+  actions,
+  onRenameRequest,
+  onDeleteRequest,
+  onUploadRequest,
+  onNewFolderRequest,
 }: FileTableProps) {
-  const [editingName, setEditingName] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editingFileId && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingFileId]);
-
   const handleFolderClick = (e: React.MouseEvent, folderName: string) => {
     e.preventDefault();
     e.stopPropagation();
     onNavigateToFolder?.(folderName);
   };
 
-  const handleStartRename = (file: FileItem) => {
-    setEditingName(file.name);
-    onStartRename(file);
-  };
-
-  return (
+  const renderTableContent = () => (
     <div className="rounded-lg border">
       <Table>
         <TableHeader>
@@ -128,90 +109,93 @@ export function FileTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {files.map((file) => (
-            <TableRow
-              key={file.id}
-              className={cn(
-                "cursor-pointer",
-                selectedFileId === file.id && "bg-accent"
-              )}
-              onClick={() =>
-                onSelectFile(selectedFileId === file.id ? null : file)
-              }
-            >
-              <TableCell>
-                {editingFileId === file.id ? (
-                  <div className="flex items-center gap-3">
-                    {getFileIcon(file)}
-                    <Input
-                      ref={inputRef}
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          onConfirmRename(file, editingName);
-                        } else if (e.key === "Escape") {
-                          e.preventDefault();
-                          onCancelRename();
-                        }
-                      }}
-                      onBlur={() => onCancelRename()}
-                      className="h-7 w-64"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                ) : file.type === "folder" ? (
-                  <button
-                    type="button"
-                    className="flex items-center gap-3 font-medium hover:underline text-left"
-                    onClick={(e) => handleFolderClick(e, file.name)}
-                  >
-                    {getFileIcon(file)}
-                    {file.name}
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-3 font-medium">
-                    {getFileIcon(file)}
-                    {file.name}
-                  </div>
+          {files.map((file) => {
+            const rowContent = (
+              <TableRow
+                key={file.id}
+                className={cn(
+                  "cursor-pointer",
+                  selectedFileId === file.id && "bg-accent"
                 )}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {formatDate(file.lastModified)}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {file.size || "—"}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      onClick={(e) => e.stopPropagation()}
+                onClick={() =>
+                  onSelectFile(selectedFileId === file.id ? null : file)
+                }
+              >
+                <TableCell>
+                  {file.type === "folder" ? (
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 font-medium hover:underline text-left"
+                      onClick={(e) => handleFolderClick(e, file.name)}
                     >
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartRename(file);
-                      }}
-                    >
-                      <Pencil className="mr-2 size-4" />
-                      Rename
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+                      {getFileIcon(file)}
+                      {file.name}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-3 font-medium">
+                      {getFileIcon(file)}
+                      {file.name}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(file.lastModified)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {file.size || "—"}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectFile(file);
+                    }}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+
+            if (actions && onRenameRequest && onDeleteRequest && onUploadRequest && onNewFolderRequest) {
+              return (
+                <FileContextMenu
+                  key={file.id}
+                  file={file}
+                  actions={actions}
+                  onRenameRequest={onRenameRequest}
+                  onDeleteRequest={onDeleteRequest}
+                  onUploadRequest={onUploadRequest}
+                  onNewFolderRequest={onNewFolderRequest}
+                >
+                  {rowContent}
+                </FileContextMenu>
+              );
+            }
+
+            return rowContent;
+          })}
         </TableBody>
       </Table>
     </div>
   );
+
+  if (actions && onRenameRequest && onDeleteRequest && onUploadRequest && onNewFolderRequest) {
+    return (
+      <FileContextMenu
+        actions={actions}
+        onRenameRequest={onRenameRequest}
+        onDeleteRequest={onDeleteRequest}
+        onUploadRequest={onUploadRequest}
+        onNewFolderRequest={onNewFolderRequest}
+      >
+        {renderTableContent()}
+      </FileContextMenu>
+    );
+  }
+
+  return renderTableContent();
 }
