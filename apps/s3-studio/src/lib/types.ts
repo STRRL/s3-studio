@@ -22,6 +22,7 @@ export interface S3ClientWrapper {
   delete: (path: string) => Promise<void>;
   stat: (path: string) => Promise<FileEntry>;
   rename: (from: string, to: string) => Promise<void>;
+  createDir: (path: string) => Promise<void>;
   free: () => void;
 }
 

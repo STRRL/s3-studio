@@ -106,7 +106,7 @@ export function useFileActions({
             await client.delete(entry.path);
           }
 
-          await client.write(newFolderPath, new Uint8Array(0));
+          await client.createDir(newFolderPath);
           await client.delete(oldFolderPath);
         } else {
           const newPath = pathPrefix + newName;
@@ -179,7 +179,7 @@ export function useFileActions({
       try {
         const pathPrefix = getCurrentPathPrefix();
         const folderPath = pathPrefix + name + "/";
-        await client.write(folderPath, new Uint8Array(0));
+        await client.createDir(folderPath);
         onRefresh();
       } catch (err) {
         console.error("Failed to create folder:", err);
