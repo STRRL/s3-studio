@@ -165,6 +165,20 @@ impl S3Client {
 
         Ok(())
     }
+
+    #[wasm_bindgen]
+    pub async fn create_dir(&self, path: &str) -> Result<(), JsValue> {
+        log(&format!("Creating directory: {}", path));
+
+        self.operator
+            .create_dir(path)
+            .await
+            .map_err(|e| JsValue::from_str(&format!("Failed to create directory: {}", e)))?;
+
+        log("Directory created successfully");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
