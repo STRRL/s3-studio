@@ -3,4 +3,5 @@ export {
   PreviewLoading,
   PreviewError,
   UnsupportedPreview,
+  FileTooLarge,
 } from "./preview-placeholder";

@@ -17,9 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { FilePreviewDispatcher } from "./preview";
+import { FilePreviewDispatcher, FileTooLarge } from "./preview";
 import { getFileTypeInfo, canPreviewFile } from "@/lib/file-types";
-import { cn } from "@/lib/utils";
+import { cn, PREVIEW_SIZE_LIMIT } from "@/lib/utils";
 import type { FileItem } from "@/types/file";
 
 interface FilePropertiesPanelProps {
@@ -91,8 +91,10 @@ export function FilePropertiesPanel({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  const isFileTooLarge = file?.sizeBytes !== undefined && file.sizeBytes > PREVIEW_SIZE_LIMIT;
+
   useEffect(() => {
-    if (!file || file.type === "folder" || !onLoadPreview || !canPreviewFile(file.name)) {
+    if (!file || file.type === "folder" || !onLoadPreview || !canPreviewFile(file.name) || isFileTooLarge) {
       setPreviewData(null);
       setPreviewError(null);
       return;
@@ -117,7 +119,7 @@ export function FilePropertiesPanel({
     return () => {
       cancelled = true;
     };
-  }, [file?.keyPath, file?.type, file?.name, onLoadPreview]);
+  }, [file?.keyPath, file?.type, file?.name, file?.sizeBytes, onLoadPreview, isFileTooLarge]);
 
   if (!file) return null;
 
@@ -129,6 +131,16 @@ export function FilePropertiesPanel({
         <div className="flex h-full items-center justify-center">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
+      );
+    }
+
+    if (isFileTooLarge && file.sizeBytes !== undefined) {
+      return (
+        <FileTooLarge
+          filename={file.name}
+          fileSize={file.sizeBytes}
+          maxSize={PREVIEW_SIZE_LIMIT}
+        />
       );
     }
 

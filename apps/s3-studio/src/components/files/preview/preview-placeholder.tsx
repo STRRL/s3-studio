@@ -1,4 +1,5 @@
-import { Loader2, File, AlertCircle } from "lucide-react";
+import { Loader2, File, AlertCircle, Download } from "lucide-react";
+import { formatFileSize } from "@/lib/utils";
 
 export function PreviewLoading() {
   return (
@@ -31,6 +32,28 @@ export function UnsupportedPreview({ filename }: UnsupportedPreviewProps) {
       <File className="size-16" />
       <p className="text-sm">Preview not available</p>
       <p className="max-w-[200px] truncate text-xs">{filename}</p>
+    </div>
+  );
+}
+
+interface FileTooLargeProps {
+  filename: string;
+  fileSize: number;
+  maxSize: number;
+}
+
+export function FileTooLarge({ filename, fileSize, maxSize }: FileTooLargeProps) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+      <Download className="size-12" />
+      <div className="text-center">
+        <p className="text-sm font-medium">File too large to preview</p>
+        <p className="mt-1 text-xs">
+          {formatFileSize(fileSize)} exceeds {formatFileSize(maxSize)} limit
+        </p>
+      </div>
+      <p className="max-w-[200px] truncate text-xs">{filename}</p>
+      <p className="text-xs">Please download the file to view it</p>
     </div>
   );
 }
