@@ -1,9 +1,7 @@
 "use client";
 
-import { Search, Settings, User } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -55,16 +53,6 @@ export function Header({ breadcrumbs, actions }: HeaderProps) {
         </div>
 
         {actions}
-
-        <Button variant="ghost" size="icon">
-          <Settings className="size-4" />
-        </Button>
-
-        <Avatar className="size-8">
-          <AvatarFallback className="bg-muted text-xs">
-            <User className="size-4" />
-          </AvatarFallback>
-        </Avatar>
       </div>
     </header>
   );
