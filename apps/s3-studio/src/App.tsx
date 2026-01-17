@@ -19,26 +19,19 @@ import { useFileActions } from "@/hooks/use-file-actions";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { S3Config, FileEntry } from "@/lib/types";
 import type { FileItem } from "@/types/file";
+import { formatFileSize } from "@/lib/utils";
 
 function convertToFileItem(entry: FileEntry, index: number): FileItem {
   return {
     id: `${index}-${entry.path}`,
     name: entry.name,
     type: entry.is_dir ? "folder" : "file",
-    size: entry.is_dir ? undefined : formatBytes(entry.size),
+    size: entry.is_dir ? undefined : formatFileSize(entry.size),
     sizeBytes: entry.size,
     lastModified: entry.last_modified ? new Date(entry.last_modified) : new Date(),
     isPublic: false,
     keyPath: entry.path,
   };
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export default function App() {

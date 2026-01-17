@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { getFileTypeInfo } from "@/lib/file-types";
-import { PreviewLoading, UnsupportedPreview } from "./preview-placeholder";
+import { PreviewLoading, UnsupportedPreview, FileTooLarge } from "./preview-placeholder";
+import { PREVIEW_SIZE_LIMIT } from "@/lib/utils";
 import type { FileItem } from "@/types/file";
 
 const ImagePreview = lazy(() => import("./image-preview"));
@@ -21,6 +22,17 @@ export function FilePreviewDispatcher({
   onError,
 }: FilePreviewDispatcherProps) {
   const typeInfo = getFileTypeInfo(file.name);
+  const fileSize = file.sizeBytes ?? data.byteLength;
+
+  if (fileSize > PREVIEW_SIZE_LIMIT) {
+    return (
+      <FileTooLarge
+        filename={file.name}
+        fileSize={fileSize}
+        maxSize={PREVIEW_SIZE_LIMIT}
+      />
+    );
+  }
 
   const previewProps = {
     data,
