@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { S3Config, S3ClientWrapper, FileEntry } from '@/lib/types';
 import { useWasm } from './use-wasm';
 
@@ -7,6 +7,7 @@ export function useS3Client(config: S3Config | null) {
   const [client, setClient] = useState<S3ClientWrapper | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(false);
+  const clientRef = useRef<S3ClientWrapper | null>(null);
 
   const createClient = useCallback(async (cfg: S3Config) => {
     if (!initialized) {
@@ -55,24 +56,29 @@ export function useS3Client(config: S3Config | null) {
     setLoading(true);
     setError(null);
 
+    let isCancelled = false;
+
     createClient(config)
       .then((newClient) => {
-        setClient((oldClient) => {
-          if (oldClient) {
-            oldClient.free();
-          }
-          return newClient;
-        });
+        if (isCancelled) {
+          newClient.free();
+          return;
+        }
+        clientRef.current = newClient;
+        setClient(newClient);
         setLoading(false);
       })
       .catch((err) => {
+        if (isCancelled) return;
         setError(err instanceof Error ? err : new Error('Failed to create client'));
         setLoading(false);
       });
 
     return () => {
-      if (client) {
-        client.free();
+      isCancelled = true;
+      if (clientRef.current) {
+        clientRef.current.free();
+        clientRef.current = null;
       }
     };
   }, [config, initialized, wasmLoading, createClient]);
