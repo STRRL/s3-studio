@@ -69,13 +69,43 @@ impl S3Client {
         let items: Vec<_> = lister.try_collect().await
             .map_err(|e| JsValue::from_str(&format!("Failed to collect entries: {}", e)))?;
 
+        // Normalize the prefix for filtering direct children
+        let prefix = if path == "/" { "" } else { path.trim_start_matches('/') };
+
         for entry in items {
             let metadata = entry.metadata();
-            let path = entry.path().to_string();
-            let name = path.trim_end_matches('/').split('/').last().unwrap_or(&path).to_string();
+            let entry_path = entry.path().to_string();
+
+            // Get the relative path by removing the prefix
+            let relative_path = if prefix.is_empty() {
+                entry_path.as_str()
+            } else {
+                entry_path.strip_prefix(prefix).unwrap_or(&entry_path)
+            };
+
+            // Skip if relative path is empty (it's the directory itself)
+            if relative_path.is_empty() || relative_path == "/" {
+                continue;
+            }
+
+            // Only include direct children:
+            // - For directories: relative path should be "name/" (one segment + trailing slash)
+            // - For files: relative path should be "name" (one segment, no slash)
+            let relative_trimmed = relative_path.trim_start_matches('/').trim_end_matches('/');
+            if relative_trimmed.contains('/') {
+                // This is a nested entry, skip it
+                continue;
+            }
+
+            let name = relative_trimmed.to_string();
+
+            // Skip empty names
+            if name.is_empty() {
+                continue;
+            }
 
             entries.push(FileEntry {
-                path: path.clone(),
+                path: entry_path.clone(),
                 name,
                 size: metadata.content_length(),
                 is_dir: metadata.is_dir(),
