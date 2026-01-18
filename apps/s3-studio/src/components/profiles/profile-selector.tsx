@@ -60,7 +60,7 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
               <div
                 key={profileId}
                 className={cn(
-                  "group flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors",
+                  "group flex items-center gap-2 rounded-md px-3 py-2 transition-colors",
                   isActive
                     ? "bg-accent text-accent-foreground"
                     : "hover:bg-accent/50"
@@ -69,10 +69,7 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
               >
                 <ConnectionStatus status={status} message={testResult?.message} />
                 <span className="flex-1 truncate text-sm">{profile.name}</span>
-                <div
-                  className="cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button

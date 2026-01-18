@@ -113,10 +113,7 @@ export function FileTable({
             const rowContent = (
               <TableRow
                 key={file.id}
-                className={cn(
-                  "cursor-pointer",
-                  selectedFileId === file.id && "bg-accent"
-                )}
+                className={cn(selectedFileId === file.id && "bg-accent")}
                 onClick={() =>
                   onSelectFile(selectedFileId === file.id ? null : file)
                 }
