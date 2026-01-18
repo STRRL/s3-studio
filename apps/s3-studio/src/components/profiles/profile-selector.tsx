@@ -69,44 +69,38 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
               >
                 <ConnectionStatus status={status} message={testResult?.message} />
                 <span className="flex-1 truncate text-sm">{profile.name}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className={cn(
-                        "size-6 shrink-0",
-                        isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                      )}
-                      title="Profile options"
-                    >
-                      <MoreVertical className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" side="right">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(profileId);
-                      }}
-                    >
-                      <Settings className="size-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    {isActive && (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDisconnect();
-                        }}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className={cn(
+                          "size-6 shrink-0",
+                          isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        )}
+                        title="Profile options"
                       >
-                        <Power className="size-4" />
-                        Disconnect
+                        <MoreVertical className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="right">
+                      <DropdownMenuItem onClick={() => onEdit(profileId)}>
+                        <Settings className="size-4" />
+                        Settings
                       </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {isActive && (
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onDisconnect()}
+                        >
+                          <Power className="size-4" />
+                          Disconnect
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             );
           })}
