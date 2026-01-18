@@ -72,9 +72,8 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
                 <div
                   className="cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
