@@ -69,7 +69,7 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
               >
                 <ConnectionStatus status={status} message={testResult?.message} />
                 <span className="flex-1 truncate text-sm">{profile.name}</span>
-                <div onClick={(e) => e.stopPropagation()}>
+                <div className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
