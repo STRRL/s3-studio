@@ -51,3 +51,6 @@ pkg/
 *.swp
 *.swo
 *~
+
+# Playwright MCP
+.playwright-mcp/
