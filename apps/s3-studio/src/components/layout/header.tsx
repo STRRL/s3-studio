@@ -1,7 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -42,18 +40,7 @@ export function Header({ breadcrumbs, actions }: HeaderProps) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center gap-4">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search files..."
-            className="pl-9"
-          />
-        </div>
-
-        {actions}
-      </div>
+      {actions}
     </header>
   );
 }
