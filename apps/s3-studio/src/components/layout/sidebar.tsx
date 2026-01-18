@@ -5,9 +5,10 @@ import { ProfileSelector } from "@/components/profiles/profile-selector";
 interface SidebarProps {
   onAddProfile: () => void;
   onEditProfile: (profileId: string) => void;
+  onDisconnect: () => void;
 }
 
-export function Sidebar({ onAddProfile, onEditProfile }: SidebarProps) {
+export function Sidebar({ onAddProfile, onEditProfile, onDisconnect }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-sidebar">
       <div className="flex h-full flex-col">
@@ -22,6 +23,7 @@ export function Sidebar({ onAddProfile, onEditProfile }: SidebarProps) {
           <ProfileSelector
             onAddNew={onAddProfile}
             onEdit={onEditProfile}
+            onDisconnect={onDisconnect}
           />
         </ScrollArea>
       </div>

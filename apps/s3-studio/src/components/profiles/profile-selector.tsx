@@ -1,7 +1,13 @@
 "use client";
 
-import { Plus, Pencil, Check } from "lucide-react";
+import { Plus, MoreVertical, Settings, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConnectionStatus } from "./connection-status";
 import { useProfileStore } from "@/stores/profile-store";
 import { cn } from "@/lib/utils";
@@ -9,9 +15,10 @@ import { cn } from "@/lib/utils";
 interface ProfileSelectorProps {
   onAddNew: () => void;
   onEdit: (profileId: string) => void;
+  onDisconnect: () => void;
 }
 
-export function ProfileSelector({ onAddNew, onEdit }: ProfileSelectorProps) {
+export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelectorProps) {
   const {
     profiles,
     profileOrder,
@@ -62,21 +69,45 @@ export function ProfileSelector({ onAddNew, onEdit }: ProfileSelectorProps) {
               >
                 <ConnectionStatus status={status} message={testResult?.message} />
                 <span className="flex-1 truncate text-sm">{profile.name}</span>
-                {isActive && (
-                  <Check className="size-3.5 text-primary shrink-0" />
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-6 opacity-0 group-hover:opacity-100 shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(profileId);
-                  }}
-                  title="Edit profile"
-                >
-                  <Pencil className="size-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className={cn(
+                        "size-6 shrink-0",
+                        isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Profile options"
+                    >
+                      <MoreVertical className="size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="right">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(profileId);
+                      }}
+                    >
+                      <Settings className="size-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    {isActive && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDisconnect();
+                        }}
+                      >
+                        <Power className="size-4" />
+                        Disconnect
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}

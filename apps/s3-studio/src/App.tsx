@@ -236,7 +236,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} />
+      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} onDisconnect={handleDisconnect} />
 
       <ProfileFormModal
         open={profileModalOpen}
@@ -259,23 +259,7 @@ export default function App() {
               />
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <FileBreadcrumb bucketId={config.bucket} path={currentPath} onNavigateTo={handleNavigateTo} />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleEditProfile(activeProfileId!)}
-                      className="text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Settings
-                    </button>
-                    <button
-                      onClick={handleDisconnect}
-                      className="text-sm text-destructive hover:text-destructive/80"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
+                <FileBreadcrumb bucketId={config.bucket} path={currentPath} onNavigateTo={handleNavigateTo} />
 
                 <FileToolbar
                   viewMode={viewMode}
