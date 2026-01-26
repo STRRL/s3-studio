@@ -26,4 +26,13 @@ export default defineConfig({
       },
     },
   },
+  server: {
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+    },
+    watch: {
+      usePolling: false,
+    },
+  },
 });
