@@ -81,7 +81,7 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
                         <MoreVertical className="size-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" side="right">
+                    <DropdownMenuContent align="start" side="right" alignOffset={12}>
                       <DropdownMenuItem onClick={() => onEdit(profileId)}>
                         <Settings className="size-4" />
                         Settings
