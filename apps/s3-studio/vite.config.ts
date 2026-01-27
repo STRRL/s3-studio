@@ -32,7 +32,9 @@ export default defineConfig({
       host: 'localhost',
     },
     watch: {
-      usePolling: false,
+      usePolling: true,
+      interval: 100,
+      cwd: path.resolve(__dirname),
     },
   },
 });
