@@ -36,13 +36,13 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
           Connections
         </p>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon-sm"
           className="size-6"
           onClick={onAddNew}
           title="Add new profile"
         >
-          <Plus className="size-3.5" />
+          <Plus className="size-4" />
         </Button>
       </div>
 
@@ -75,16 +75,14 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className={cn(
-                          "size-6 shrink-0",
-                          isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        )}
+                        className="size-6 shrink-0"
                         title="Profile options"
                       >
                         <MoreVertical className="size-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="right">
+                    <DropdownMenuContent align="start" side="right"
+                      alignOffset={12} sideOffset={-12}>
                       <DropdownMenuItem onClick={() => onEdit(profileId)}>
                         <Settings className="size-4" />
                         Settings

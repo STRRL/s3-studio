@@ -236,7 +236,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} onDisconnect={handleDisconnect} />
+      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} onDisconnect={handleDisconnect} activeProfileId={activeProfileId} />
 
       <ProfileFormModal
         open={profileModalOpen}

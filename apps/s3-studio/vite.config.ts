@@ -26,4 +26,15 @@ export default defineConfig({
       },
     },
   },
+  server: {
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+    },
+    watch: {
+      usePolling: true,
+      interval: 100,
+      cwd: path.resolve(__dirname),
+    },
+  },
 });
