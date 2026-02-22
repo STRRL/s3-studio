@@ -10,6 +10,7 @@ A pure frontend application for browsing and managing files across AWS S3, Azure
 - **🚀 Pure Frontend**: No backend required - deploy as static site
 - **⚡ WASM Performance**: Near-native speed with Rust/WebAssembly
 - **🔒 Secure**: Your credentials stay in your browser
+- **🔁 Profile Import/Export**: Backup and migrate connection profiles with conflict handling
 - **📱 Progressive Web App**: Works offline, installable on desktop/mobile
 - **🎨 Modern UI**: Built with Next.js 16, React 19, and Tailwind CSS 4
 
@@ -58,6 +59,20 @@ pnpm build            # Build all packages
 pnpm build:wasm       # Build WASM only
 pnpm lint             # Lint all packages
 ```
+
+## 🔁 Profile Import / Export
+
+Use the **Connections** menu (⋮) in the sidebar:
+
+- **Import Profiles**
+  - Rename duplicates
+  - Overwrite duplicates
+  - Skip duplicates
+- **Export Profiles**
+  - Without secrets (recommended for sharing)
+  - Include secrets (full backup)
+
+Export format is versioned JSON (`version: 1`) for forward-compatible migrations.
 
 ## 📚 Documentation
 

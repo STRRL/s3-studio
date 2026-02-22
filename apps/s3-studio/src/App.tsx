@@ -17,7 +17,11 @@ import { useS3Client } from "@/hooks/use-s3-client";
 import { useProfileStore } from "@/stores/profile-store";
 import { useFileActions } from "@/hooks/use-file-actions";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { S3Config, FileEntry } from "@/lib/types";
+import type {
+  S3Config,
+  FileEntry,
+  ProfileImportConflictStrategy,
+} from "@/lib/types";
 import type { FileItem } from "@/types/file";
 import { formatFileSize } from "@/lib/utils";
 
@@ -42,6 +46,8 @@ export default function App() {
     updateProfile,
     deleteProfile,
     setActiveProfile,
+    exportProfiles,
+    importProfiles,
     getActiveConfig,
   } = useProfileStore();
 
@@ -63,16 +69,21 @@ export default function App() {
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const pendingImportStrategyRef = useRef<ProfileImportConflictStrategy>("rename");
 
   const { client, loading: clientLoading, error: clientError } = useS3Client(config);
 
   const hasProfiles = Object.keys(profiles).length > 0;
 
+  // Only auto-open on initial mount so the sidebar import flow stays reachable
+  // when there are no profiles (the effect must not re-run on every hasProfiles change).
   useEffect(() => {
     if (!hasProfiles) {
       setProfileModalOpen(true);
     }
-  }, [hasProfiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (prevActiveProfileIdRef.current !== activeProfileId) {
@@ -141,6 +152,70 @@ export default function App() {
     setFiles([]);
     setSelectedFile(null);
   };
+
+  const handleExportProfiles = useCallback(
+    (includeSecrets: boolean) => {
+      try {
+        const payload = exportProfiles({ includeSecrets });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `s3-studio-profiles-v${payload.version}-${includeSecrets ? "with-secrets" : "without-secrets"}-${timestamp}.json`;
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: "application/json",
+        });
+
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to export profiles";
+        window.alert(message);
+      }
+    },
+    [exportProfiles]
+  );
+
+  const handleImportProfiles = useCallback((strategy: ProfileImportConflictStrategy) => {
+    pendingImportStrategyRef.current = strategy;
+    importFileInputRef.current?.click();
+  }, []);
+
+  const handleImportFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const payload = JSON.parse(text) as unknown;
+        const result = importProfiles(payload, {
+          strategy: pendingImportStrategyRef.current,
+        });
+
+        window.alert(
+          [
+            "Profiles import completed:",
+            `- Imported: ${result.imported}`,
+            `- Overwritten: ${result.overwritten}`,
+            `- Renamed: ${result.renamed}`,
+            `- Skipped: ${result.skipped}`,
+          ].join("\n")
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to import profiles";
+        window.alert(`Import failed: ${message}`);
+      } finally {
+        if (importFileInputRef.current) {
+          importFileInputRef.current.value = "";
+        }
+      }
+    },
+    [importProfiles]
+  );
 
   const handleNavigateToFolder = useCallback((folderName: string) => {
     setCurrentPath((prev) => [...prev, folderName]);
@@ -236,7 +311,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar onAddProfile={handleAddProfile} onEditProfile={handleEditProfile} onDisconnect={handleDisconnect} activeProfileId={activeProfileId} />
+      <Sidebar
+        onAddProfile={handleAddProfile}
+        onEditProfile={handleEditProfile}
+        onDisconnect={handleDisconnect}
+        onExportProfiles={handleExportProfiles}
+        onImportProfiles={handleImportProfiles}
+        activeProfileId={activeProfileId}
+      />
 
       <ProfileFormModal
         open={profileModalOpen}
@@ -333,6 +415,14 @@ export default function App() {
         className="hidden"
         multiple
         onChange={handleFileInputChange}
+      />
+
+      <input
+        type="file"
+        ref={importFileInputRef}
+        className="hidden"
+        accept="application/json,.json"
+        onChange={handleImportFileChange}
       />
 
       <RenameDialog

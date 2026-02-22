@@ -1,9 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { S3Config, S3Profile, ConnectionTestResult } from '@/lib/types';
+import type {
+  S3Config,
+  S3Profile,
+  ConnectionTestResult,
+  ProfileExportPayload,
+  ProfileImportConflictStrategy,
+  ProfileImportResult,
+} from '@/lib/types';
 import { generateProfileId, LEGACY_STORAGE_KEY } from '@/lib/storage';
 
 const PROFILES_STORAGE_KEY = 's3-studio-profiles';
+const PROFILE_EXPORT_VERSION = 1;
 
 interface ProfileState {
   profiles: Record<string, S3Profile>;
@@ -18,6 +26,12 @@ interface ProfileState {
 
   setConnectionTestStatus: (profileId: string, result: ConnectionTestResult) => void;
   clearConnectionTest: (profileId: string) => void;
+
+  exportProfiles: (options?: { includeSecrets?: boolean }) => ProfileExportPayload;
+  importProfiles: (
+    payload: unknown,
+    options?: { strategy?: ProfileImportConflictStrategy }
+  ) => ProfileImportResult;
 
   getActiveProfile: () => S3Profile | null;
   getActiveConfig: () => S3Config | null;
@@ -53,6 +67,103 @@ function migrateFromLegacyConfig(): Partial<ProfileState> | null {
   } catch {
     return null;
   }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizeConfig(input: unknown): S3Config {
+  if (!isObject(input)) {
+    throw new Error('Invalid profile config');
+  }
+
+  const accessKeyId = typeof input.accessKeyId === 'string' ? input.accessKeyId.trim() : '';
+  const secretAccessKey =
+    typeof input.secretAccessKey === 'string' ? input.secretAccessKey.trim() : '';
+  const region = typeof input.region === 'string' ? input.region.trim() : '';
+  const bucket = typeof input.bucket === 'string' ? input.bucket.trim() : '';
+  const endpoint = typeof input.endpoint === 'string' ? input.endpoint.trim() : undefined;
+  const sessionToken =
+    typeof input.sessionToken === 'string' && input.sessionToken.trim().length > 0
+      ? input.sessionToken.trim()
+      : undefined;
+
+  if (!accessKeyId || !region || !bucket) {
+    throw new Error('Profile must include accessKeyId, region, and bucket');
+  }
+
+  return {
+    accessKeyId,
+    secretAccessKey,
+    region,
+    bucket,
+    endpoint: endpoint || undefined,
+    sessionToken,
+  };
+}
+
+function getUniqueProfileName(existingNames: Set<string>, baseName: string): string {
+  const trimmed = baseName.trim() || 'Imported Profile';
+  const lower = trimmed.toLowerCase();
+  if (!existingNames.has(lower)) {
+    existingNames.add(lower);
+    return trimmed;
+  }
+
+  let index = 1;
+  while (true) {
+    const candidate = `${trimmed} (Imported ${index})`;
+    const candidateLower = candidate.toLowerCase();
+    if (!existingNames.has(candidateLower)) {
+      existingNames.add(candidateLower);
+      return candidate;
+    }
+    index += 1;
+  }
+}
+
+function parseImportPayload(payload: unknown): Array<{ name: string; config: S3Config }> {
+  const source = payload as Record<string, unknown>;
+  const list = Array.isArray(source?.profiles)
+    ? source.profiles
+    : Array.isArray(payload)
+      ? payload
+      : null;
+
+  if (!list) {
+    throw new Error('Invalid import file: missing profiles array');
+  }
+
+  const parsed: Array<{ name: string; config: S3Config }> = [];
+
+  for (const item of list) {
+    if (!isObject(item)) {
+      throw new Error('Invalid profile item in import file');
+    }
+
+    const rawName = typeof item.name === 'string' ? item.name.trim() : '';
+    const name = rawName || 'Imported Profile';
+    const config = normalizeConfig(item.config);
+    parsed.push({ name, config });
+  }
+
+  if (parsed.length === 0) {
+    throw new Error('Import file has no profiles');
+  }
+
+  return parsed;
+}
+
+function buildExportConfig(config: S3Config, includeSecrets: boolean): S3Config {
+  return {
+    accessKeyId: config.accessKeyId,
+    secretAccessKey: includeSecrets ? config.secretAccessKey : '',
+    sessionToken: includeSecrets ? config.sessionToken : undefined,
+    region: config.region,
+    bucket: config.bucket,
+    endpoint: config.endpoint,
+  };
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -108,12 +219,15 @@ export const useProfileStore = create<ProfileState>()(
 
       deleteProfile: (id) => {
         set((state) => {
-          const { [id]: removed, ...remainingProfiles } = state.profiles;
+          const remainingProfiles = { ...state.profiles };
+          delete remainingProfiles[id];
+
           const newOrder = state.profileOrder.filter((pid) => pid !== id);
           const newActiveId =
             state.activeProfileId === id ? (newOrder[0] ?? null) : state.activeProfileId;
 
-          const { [id]: removedTest, ...remainingTests } = state.connectionTest;
+          const remainingTests = { ...state.connectionTest };
+          delete remainingTests[id];
 
           return {
             profiles: remainingProfiles,
@@ -136,9 +250,123 @@ export const useProfileStore = create<ProfileState>()(
 
       clearConnectionTest: (profileId) => {
         set((state) => {
-          const { [profileId]: removed, ...rest } = state.connectionTest;
-          return { connectionTest: rest };
+          const nextConnectionTest = { ...state.connectionTest };
+          delete nextConnectionTest[profileId];
+          return { connectionTest: nextConnectionTest };
         });
+      },
+
+      exportProfiles: ({ includeSecrets = false } = {}) => {
+        const state = get();
+        const profiles = state.profileOrder
+          .map((profileId) => state.profiles[profileId])
+          .filter((profile): profile is S3Profile => Boolean(profile))
+          .map((profile) => ({
+            name: profile.name,
+            config: buildExportConfig(profile.config, includeSecrets),
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+          }));
+
+        return {
+          version: PROFILE_EXPORT_VERSION,
+          exportedAt: new Date().toISOString(),
+          includeSecrets,
+          profiles,
+        };
+      },
+
+      importProfiles: (payload, { strategy = 'rename' } = {}) => {
+        const importedProfiles = parseImportPayload(payload);
+        const now = new Date().toISOString();
+
+        const result: ProfileImportResult = {
+          imported: 0,
+          overwritten: 0,
+          skipped: 0,
+          renamed: 0,
+        };
+
+        set((state) => {
+          const nextProfiles = { ...state.profiles };
+          const nextOrder = [...state.profileOrder];
+          const nextConnectionTest = { ...state.connectionTest };
+          const existingNames = new Set(
+            nextOrder
+              .map((profileId) => nextProfiles[profileId]?.name?.toLowerCase())
+              .filter((name): name is string => Boolean(name))
+          );
+
+          for (const incoming of importedProfiles) {
+            const targetName = incoming.name;
+            const targetLower = targetName.toLowerCase();
+            const matchedId = nextOrder.find(
+              (profileId) => nextProfiles[profileId]?.name?.toLowerCase() === targetLower
+            );
+
+            if (matchedId) {
+              if (strategy === 'skip') {
+                result.skipped += 1;
+                continue;
+              }
+
+              if (strategy === 'overwrite') {
+                const existing = nextProfiles[matchedId];
+                // Preserve existing secrets when the incoming export omitted them
+                // (i.e. was produced with includeSecrets:false and the fields are blank).
+                const mergedConfig: S3Config = { ...incoming.config };
+                if (!mergedConfig.secretAccessKey && existing.config.secretAccessKey) {
+                  mergedConfig.secretAccessKey = existing.config.secretAccessKey;
+                }
+                if (!mergedConfig.sessionToken && existing.config.sessionToken) {
+                  mergedConfig.sessionToken = existing.config.sessionToken;
+                }
+                nextProfiles[matchedId] = {
+                  ...existing,
+                  name: targetName,
+                  config: mergedConfig,
+                  updatedAt: now,
+                };
+                delete nextConnectionTest[matchedId];
+                result.imported += 1;
+                result.overwritten += 1;
+                continue;
+              }
+            }
+
+            const finalName =
+              matchedId && strategy === 'rename'
+                ? getUniqueProfileName(existingNames, targetName)
+                : targetName;
+
+            if (!matchedId) {
+              existingNames.add(finalName.toLowerCase());
+            } else if (strategy === 'rename') {
+              result.renamed += 1;
+            }
+
+            const id = generateProfileId();
+            nextProfiles[id] = {
+              id,
+              name: finalName,
+              config: incoming.config,
+              createdAt: now,
+              updatedAt: now,
+            };
+            nextOrder.push(id);
+            result.imported += 1;
+          }
+
+          return {
+            profiles: nextProfiles,
+            profileOrder: nextOrder,
+            connectionTest: nextConnectionTest,
+            // Preserve null so intentionally-disconnected users are not auto-reconnected.
+            activeProfileId: state.activeProfileId,
+          };
+        });
+
+        return result;
       },
 
       getActiveProfile: () => {
