@@ -31,14 +31,16 @@ public final class MockObjectStoreClient: ObjectStoreClient {
     }
 
     public func read(path: String) throws -> Data {
-        guard let data = objects[path] else {
+        let key = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        guard let data = objects[key] else {
             throw NSError(domain: "MountPOC", code: 404, userInfo: [NSLocalizedDescriptionKey: "Object not found: \(path)"])
         }
         return data
     }
 
     public func write(path: String, data: Data) throws {
-        objects[path] = data
+        let key = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        objects[key] = data
     }
 }
 
