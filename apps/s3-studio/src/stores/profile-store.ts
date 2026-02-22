@@ -312,10 +312,19 @@ export const useProfileStore = create<ProfileState>()(
 
               if (strategy === 'overwrite') {
                 const existing = nextProfiles[matchedId];
+                // Preserve existing secrets when the incoming export omitted them
+                // (i.e. was produced with includeSecrets:false and the fields are blank).
+                const mergedConfig: S3Config = { ...incoming.config };
+                if (!mergedConfig.secretAccessKey && existing.config.secretAccessKey) {
+                  mergedConfig.secretAccessKey = existing.config.secretAccessKey;
+                }
+                if (!mergedConfig.sessionToken && existing.config.sessionToken) {
+                  mergedConfig.sessionToken = existing.config.sessionToken;
+                }
                 nextProfiles[matchedId] = {
                   ...existing,
                   name: targetName,
-                  config: incoming.config,
+                  config: mergedConfig,
                   updatedAt: now,
                 };
                 delete nextConnectionTest[matchedId];
@@ -352,7 +361,8 @@ export const useProfileStore = create<ProfileState>()(
             profiles: nextProfiles,
             profileOrder: nextOrder,
             connectionTest: nextConnectionTest,
-            activeProfileId: state.activeProfileId ?? nextOrder[0] ?? null,
+            // Preserve null so intentionally-disconnected users are not auto-reconnected.
+            activeProfileId: state.activeProfileId,
           };
         });
 

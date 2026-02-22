@@ -76,11 +76,14 @@ export default function App() {
 
   const hasProfiles = Object.keys(profiles).length > 0;
 
+  // Only auto-open on initial mount so the sidebar import flow stays reachable
+  // when there are no profiles (the effect must not re-run on every hasProfiles change).
   useEffect(() => {
     if (!hasProfiles) {
       setProfileModalOpen(true);
     }
-  }, [hasProfiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (prevActiveProfileIdRef.current !== activeProfileId) {
