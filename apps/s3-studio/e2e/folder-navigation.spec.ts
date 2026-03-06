@@ -126,20 +126,21 @@ test.describe("Folder navigation", () => {
 
     await createAndConnectProfile(page, provider, profileName);
 
-    // Default is list view — list button should have bg-accent class
+    // Default is list view — list button should have standalone bg-accent class
+    // (use string form so Playwright checks individual class tokens, not substring)
     const listBtn = page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-list") });
     const gridBtn = page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-layout-grid") });
-    await expect(listBtn).toHaveClass(/bg-accent/);
-    await expect(gridBtn).not.toHaveClass(/bg-accent/);
+    await expect(listBtn).toHaveClass("bg-accent");
+    await expect(gridBtn).not.toHaveClass("bg-accent");
 
     // Click grid — grid button becomes active
     await gridBtn.click();
-    await expect(gridBtn).toHaveClass(/bg-accent/);
-    await expect(listBtn).not.toHaveClass(/bg-accent/);
+    await expect(gridBtn).toHaveClass("bg-accent");
+    await expect(listBtn).not.toHaveClass("bg-accent");
 
     // Click list — list button becomes active again
     await listBtn.click();
-    await expect(listBtn).toHaveClass(/bg-accent/);
-    await expect(gridBtn).not.toHaveClass(/bg-accent/);
+    await expect(listBtn).toHaveClass("bg-accent");
+    await expect(gridBtn).not.toHaveClass("bg-accent");
   });
 });
