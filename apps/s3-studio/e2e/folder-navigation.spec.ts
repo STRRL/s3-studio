@@ -118,7 +118,7 @@ test.describe("Folder navigation", () => {
     await expect(rowByName(page, newName)).toHaveCount(0, { timeout: 30_000 });
   });
 
-  test("view mode toggle switches between list and grid", async ({ page }) => {
+  test("view mode toggle buttons reflect active state", async ({ page }) => {
     test.setTimeout(3 * 60_000);
 
     const id = randomId();
@@ -126,15 +126,20 @@ test.describe("Folder navigation", () => {
 
     await createAndConnectProfile(page, provider, profileName);
 
-    // Default should be list view (table visible)
-    await expect(page.locator("table")).toBeVisible();
+    // Default is list view — list button should have bg-accent class
+    const listBtn = page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-list") });
+    const gridBtn = page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-layout-grid") });
+    await expect(listBtn).toHaveClass(/bg-accent/);
+    await expect(gridBtn).not.toHaveClass(/bg-accent/);
 
-    // Switch to grid view
-    await page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-layout-grid") }).click();
-    await expect(page.locator("table")).not.toBeVisible({ timeout: 5_000 });
+    // Click grid — grid button becomes active
+    await gridBtn.click();
+    await expect(gridBtn).toHaveClass(/bg-accent/);
+    await expect(listBtn).not.toHaveClass(/bg-accent/);
 
-    // Switch back to list view
-    await page.getByRole("button", { name: "" }).filter({ has: page.locator("svg.lucide-list") }).click();
-    await expect(page.locator("table")).toBeVisible({ timeout: 5_000 });
+    // Click list — list button becomes active again
+    await listBtn.click();
+    await expect(listBtn).toHaveClass(/bg-accent/);
+    await expect(gridBtn).not.toHaveClass(/bg-accent/);
   });
 });
