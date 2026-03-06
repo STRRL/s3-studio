@@ -164,8 +164,8 @@ test.describe("Context menu operations", () => {
 
     await createAndConnectProfile(page, provider, profileName);
 
-    // Right-click on the empty table area (outside rows)
-    await page.locator("tbody").click({ button: "right", position: { x: 200, y: 50 } });
+    // Right-click on table header (always rendered, triggers the empty-area context menu)
+    await page.locator("thead").click({ button: "right" });
     await page.getByRole("menuitem", { name: "New Folder" }).click();
 
     const dialog = page.getByRole("dialog").filter({ hasText: "Create New Folder" });

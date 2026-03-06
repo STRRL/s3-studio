@@ -41,8 +41,8 @@ test.describe("File properties panel", () => {
     const panel = page.locator("h3", { hasText: "Properties" });
     await expect(panel).toBeVisible();
 
-    // Panel shows correct file name
-    await expect(page.locator(".flex.h-full.w-96").getByText(fileName)).toBeVisible();
+    // Panel shows correct file name (exact match avoids collision with key-path row)
+    await expect(page.locator(".flex.h-full.w-96").getByText(fileName, { exact: true })).toBeVisible();
 
     // Close panel with X button
     await page.locator(".flex.h-full.w-96").getByRole("button", { name: "" }).filter({ has: page.locator("svg") }).first().click();
