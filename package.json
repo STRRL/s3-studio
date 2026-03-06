@@ -8,9 +8,11 @@
     "build:wasm": "cd packages/opendal-wasm && pnpm build",
     "test": "pnpm --filter @s3-studio/web test",
     "lint": "turbo run lint",
+    "prepare": "prek install",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@j178/prek": "^0.3.4",
     "turbo": "^2.3.3"
   },
   "packageManager": "pnpm@10.19.0",
