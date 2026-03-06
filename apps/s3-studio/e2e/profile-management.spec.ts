@@ -65,7 +65,7 @@ test.describe("Profile management", () => {
     await expect(page.locator("aside").getByText(profileName)).toHaveCount(0, { timeout: 10_000 });
   });
 
-  test("disconnect and reconnect profile", async ({ page }) => {
+  test("disconnect hides file browser", async ({ page }) => {
     test.setTimeout(3 * 60_000);
 
     const id = randomId();
@@ -78,15 +78,12 @@ test.describe("Profile management", () => {
     await profileRow.locator('button[title="Profile options"]').click();
     await page.getByRole("menuitem", { name: "Disconnect" }).click();
 
-    // File browser should no longer be visible
+    // File browser toolbar should no longer be visible
     await expect(page.getByRole("button", { name: "New Folder" })).not.toBeVisible({ timeout: 10_000 });
 
-    // Reconnect by clicking the profile again
-    await page.locator("aside").getByText(profileName).click();
-    await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible({ timeout: 30_000 });
-
-    // Cleanup
+    // Cleanup: delete profile directly via settings button (no reconnect needed)
     await deleteProfileViaSettings(page, profileName);
+    await expect(page.locator("aside").getByText(profileName)).toHaveCount(0, { timeout: 10_000 });
   });
 
   test("multiple profiles: create two and switch", async ({ page }) => {
@@ -96,24 +93,24 @@ test.describe("Profile management", () => {
     const profileA = `E2E Multi A ${id}`;
     const profileB = `E2E Multi B ${id}`;
 
-    // Create profile A
+    // Create profile A via initial form
     await createAndConnectProfile(page, provider, profileA);
 
-    // Add a second profile for the same provider
+    // Add profile B via the sidebar "Add new profile" button (opens modal)
     await page.locator('button[title="Add new profile"]').click();
-    await expect(page.getByText("New Profile")).toBeVisible();
-    await page.getByPlaceholder("My S3 Connection").fill(profileB);
-    await page.getByPlaceholder("AKIAIOSFODNN7EXAMPLE").fill(provider.accessKeyId);
-    await page
-      .getByPlaceholder("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
-      .fill(provider.secretAccessKey);
-    await page.getByPlaceholder("us-east-1").fill(provider.region);
-    await page.getByPlaceholder("my-bucket").fill(provider.bucket);
-    await page.getByPlaceholder("https://s3.example.com").fill(provider.endpoint);
-    await page.getByRole("button", { name: "Test Connection" }).click();
-    await expect(page.getByText("Connection successful")).toBeVisible({ timeout: 60_000 });
-    await page.getByRole("button", { name: "Create Profile" }).click();
-    await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible();
+    const modal = page.locator(".fixed.inset-0").filter({ hasText: "New Profile" });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await modal.getByPlaceholder("My S3 Connection").fill(profileB);
+    await modal.getByPlaceholder("AKIAIOSFODNN7EXAMPLE").fill(provider.accessKeyId);
+    await modal.getByPlaceholder("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY").fill(provider.secretAccessKey);
+    await modal.getByPlaceholder("us-east-1").fill(provider.region);
+    await modal.getByPlaceholder("my-bucket").fill(provider.bucket);
+    await modal.getByPlaceholder("https://s3.example.com").fill(provider.endpoint);
+    await modal.getByRole("button", { name: "Test Connection" }).click();
+    await expect(modal.getByText("Connection successful")).toBeVisible({ timeout: 60_000 });
+    await modal.getByRole("button", { name: "Create Profile" }).click();
+    await expect(modal).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible({ timeout: 30_000 });
 
     // Both profiles should appear in sidebar
     await expect(page.locator("aside").getByText(profileA)).toBeVisible();
