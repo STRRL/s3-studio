@@ -44,8 +44,8 @@ test.describe("Folder navigation", () => {
       page.locator("[data-slot='breadcrumb-page']").getByText(childFolder)
     ).toBeVisible();
 
-    // Navigate back to parent via breadcrumb link
-    await page.locator("nav").getByRole("link", { name: parentFolder }).click();
+    // Navigate back to parent via FileBreadcrumb button (header <a> links are decorative)
+    await page.locator("nav").getByRole("button", { name: parentFolder }).click();
     await expect(
       page.locator("[data-slot='breadcrumb-page']").getByText(parentFolder)
     ).toBeVisible();

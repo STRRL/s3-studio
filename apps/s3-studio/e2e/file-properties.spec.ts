@@ -75,8 +75,10 @@ test.describe("File properties panel", () => {
     await expect(panel.getByText("Properties")).toBeVisible();
 
     // Verify key path contains the folder and file name
+    // folderName: { exact: false } is fine (only appears inside the key path)
+    // fileName: { exact: true } avoids collision with the key path row
     await expect(panel.getByText(folderName, { exact: false })).toBeVisible();
-    await expect(panel.getByText(fileName, { exact: false })).toBeVisible();
+    await expect(panel.getByText(fileName, { exact: true })).toBeVisible();
 
     // Cleanup
     await page.locator("nav").getByRole("button", { name: provider.bucket }).click();
