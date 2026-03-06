@@ -77,7 +77,7 @@ test.describe("S3 Studio real storage E2E", () => {
       await expect(folderRow).toBeVisible({ timeout: 30_000 });
 
       await folderRow.getByRole("button", { name: folderName }).click();
-      await expect(page.locator("nav").getByText(folderName)).toBeVisible();
+      await expect(page.locator("[data-slot='breadcrumb-page']").getByText(folderName)).toBeVisible();
 
       await page.locator('input[type="file"]').setInputFiles({
         name: initialFileName,
