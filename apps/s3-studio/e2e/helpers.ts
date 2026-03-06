@@ -56,9 +56,10 @@ export async function uploadFile(
 }
 
 export async function openProfileSettings(page: Page, profileName: string) {
-  const profileRow = page.locator("aside").getByText(profileName).locator("..");
-  await profileRow.locator('button[title="Profile options"]').click();
-  await page.getByRole("menuitem", { name: "Settings" }).click();
+  // Activate the profile by clicking its row (sets activeProfileId immediately)
+  await page.locator("aside").getByText(profileName).click();
+  // Use the sidebar bottom Settings button (avoids flaky Radix dropdown)
+  await page.locator("aside").getByTitle("Edit active profile settings").click();
 }
 
 export async function deleteProfileViaSettings(page: Page, profileName: string) {
