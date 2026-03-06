@@ -119,7 +119,11 @@ test.describe("Profile management", () => {
 
     // Switch back to profile A by clicking it
     await page.locator("aside").getByText(profileA).click();
-    await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible({ timeout: 30_000 });
+    // Wait for client re-init after profile switch
+    await expect(
+      page.locator("nav").getByRole("button", { name: provider.bucket })
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible({ timeout: 60_000 });
 
     // Cleanup both
     await deleteProfileViaSettings(page, profileA);
