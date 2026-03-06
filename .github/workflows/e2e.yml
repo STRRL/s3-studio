@@ -1,0 +1,53 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      E2E_R2_ACCESS_KEY_ID: ${{ secrets.E2E_R2_ACCESS_KEY_ID }}
+      E2E_R2_SECRET_ACCESS_KEY: ${{ secrets.E2E_R2_SECRET_ACCESS_KEY }}
+      E2E_R2_REGION: ${{ secrets.E2E_R2_REGION }}
+      E2E_R2_BUCKET: ${{ secrets.E2E_R2_BUCKET }}
+      E2E_R2_ENDPOINT: ${{ secrets.E2E_R2_ENDPOINT }}
+      E2E_SUPABASE_ACCESS_KEY_ID: ${{ secrets.E2E_SUPABASE_ACCESS_KEY_ID }}
+      E2E_SUPABASE_SECRET_ACCESS_KEY: ${{ secrets.E2E_SUPABASE_SECRET_ACCESS_KEY }}
+      E2E_SUPABASE_REGION: ${{ secrets.E2E_SUPABASE_REGION }}
+      E2E_SUPABASE_BUCKET: ${{ secrets.E2E_SUPABASE_BUCKET }}
+      E2E_SUPABASE_ENDPOINT: ${{ secrets.E2E_SUPABASE_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @s3-studio/web test:e2e:install
+
+      - name: Run E2E tests
+        run: pnpm --filter @s3-studio/web test:e2e
