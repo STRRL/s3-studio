@@ -1,31 +1,48 @@
 "use client";
 
-import { Plus, MoreVertical, Settings, Power } from "lucide-react";
+import {
+  Plus,
+  MoreVertical,
+  Settings,
+  Power,
+  Download,
+  Upload,
+  FileKey,
+  ShieldOff,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConnectionStatus } from "./connection-status";
 import { useProfileStore } from "@/stores/profile-store";
 import { cn } from "@/lib/utils";
+import type { ProfileImportConflictStrategy } from "@/lib/types";
 
 interface ProfileSelectorProps {
   onAddNew: () => void;
   onEdit: (profileId: string) => void;
   onDisconnect: () => void;
+  onExport: (includeSecrets: boolean) => void;
+  onImport: (strategy: ProfileImportConflictStrategy) => void;
 }
 
-export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelectorProps) {
-  const {
-    profiles,
-    profileOrder,
-    activeProfileId,
-    connectionTest,
-    setActiveProfile,
-  } = useProfileStore();
+export function ProfileSelector({
+  onAddNew,
+  onEdit,
+  onDisconnect,
+  onExport,
+  onImport,
+}: ProfileSelectorProps) {
+  const { profiles, profileOrder, activeProfileId, connectionTest, setActiveProfile } =
+    useProfileStore();
 
   const hasProfiles = profileOrder.length > 0;
 
@@ -35,15 +52,61 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Connections
         </p>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="size-6"
-          onClick={onAddNew}
-          title="Add new profile"
-        >
-          <Plus className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="size-6" title="Import / Export profiles">
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Upload className="size-4" />
+                  Import Profiles
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => onImport("rename")}>
+                    Rename duplicates
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onImport("overwrite")}>
+                    Overwrite duplicates
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onImport("skip")}>
+                    Skip duplicates
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Download className="size-4" />
+                  Export Profiles
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => onExport(false)}>
+                    <ShieldOff className="size-4" />
+                    Without secrets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExport(true)}>
+                    <FileKey className="size-4" />
+                    Include secrets
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="size-6"
+            onClick={onAddNew}
+            title="Add new profile"
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {hasProfiles ? (
@@ -61,9 +124,7 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
                 key={profileId}
                 className={cn(
                   "group flex items-center gap-2 rounded-md px-3 py-2 transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "hover:bg-accent/50"
+                  isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
                 )}
                 onClick={() => setActiveProfile(profileId)}
               >
@@ -81,17 +142,14 @@ export function ProfileSelector({ onAddNew, onEdit, onDisconnect }: ProfileSelec
                         <MoreVertical className="size-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="right"
-                      alignOffset={12} sideOffset={-12}>
+                    <DropdownMenuContent align="start" side="right" alignOffset={12} sideOffset={-12}>
                       <DropdownMenuItem onClick={() => onEdit(profileId)}>
                         <Settings className="size-4" />
                         Settings
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       {isActive && (
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => onDisconnect()}
-                        >
+                        <DropdownMenuItem variant="destructive" onClick={() => onDisconnect()}>
                           <Power className="size-4" />
                           Disconnect
                         </DropdownMenuItem>
