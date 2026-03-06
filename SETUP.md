@@ -287,12 +287,27 @@ cd packages/opendal-wasm
 pnpm test
 ```
 
-### E2E tests (TBD)
+### E2E tests
 
 ```bash
 cd apps/s3-studio
 pnpm test:e2e
 ```
+
+Set provider env vars first (Cloudflare R2 and/or Supabase Storage). Full variable list:
+
+- `E2E_R2_ACCESS_KEY_ID`
+- `E2E_R2_SECRET_ACCESS_KEY`
+- `E2E_R2_REGION`
+- `E2E_R2_BUCKET`
+- `E2E_R2_ENDPOINT`
+- `E2E_SUPABASE_ACCESS_KEY_ID`
+- `E2E_SUPABASE_SECRET_ACCESS_KEY`
+- `E2E_SUPABASE_REGION`
+- `E2E_SUPABASE_BUCKET`
+- `E2E_SUPABASE_ENDPOINT`
+
+See `apps/s3-studio/e2e/README.md` for details.
 
 ## Deployment
 
