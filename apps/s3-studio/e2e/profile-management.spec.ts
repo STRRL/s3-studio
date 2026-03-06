@@ -80,10 +80,7 @@ test.describe("Profile management", () => {
 
     // File browser toolbar should no longer be visible
     await expect(page.getByRole("button", { name: "New Folder" })).not.toBeVisible({ timeout: 10_000 });
-
-    // Cleanup: delete profile directly via settings button (no reconnect needed)
-    await deleteProfileViaSettings(page, profileName);
-    await expect(page.locator("aside").getByText(profileName)).toHaveCount(0, { timeout: 10_000 });
+    // No R2 data created — browser context resets between tests, no explicit cleanup needed
   });
 
   test("multiple profiles: create two and switch", async ({ page }) => {
@@ -110,6 +107,10 @@ test.describe("Profile management", () => {
     await expect(modal.getByText("Connection successful")).toBeVisible({ timeout: 60_000 });
     await modal.getByRole("button", { name: "Create Profile" }).click();
     await expect(modal).not.toBeVisible({ timeout: 10_000 });
+    // Wait for the connection to establish (same pattern as createAndConnectProfile)
+    await expect(
+      page.locator("nav").getByRole("button", { name: provider.bucket })
+    ).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("button", { name: "New Folder" })).toBeVisible({ timeout: 30_000 });
 
     // Both profiles should appear in sidebar
