@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit --pretty false -p tsconfig.json && tsc --noEmit --pretty false -p tsconfig.node.json",
     "test": "pnpm test:e2e",
     "test:e2e": "playwright test --config ./playwright.config.ts",
     "test:e2e:ui": "playwright test --ui --config ./playwright.config.ts",
