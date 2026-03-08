@@ -19,10 +19,3 @@ name = "workspace lint"
 entry = "pnpm lint"
 language = "system"
 pass_filenames = false
-
-[[repos.hooks]]
-id = "workspace-test"
-name = "workspace test"
-entry = "pnpm test"
-language = "system"
-pass_filenames = false
