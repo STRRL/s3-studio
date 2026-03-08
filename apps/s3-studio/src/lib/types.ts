@@ -40,6 +40,29 @@ export interface ProfileStore {
   activeProfileId: string | null;
 }
 
+export type ProfileImportConflictStrategy = 'overwrite' | 'skip' | 'rename';
+
+export interface ProfileExportItem {
+  name: string;
+  config: S3Config;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProfileExportPayload {
+  version: number;
+  exportedAt: string;
+  includeSecrets: boolean;
+  profiles: ProfileExportItem[];
+}
+
+export interface ProfileImportResult {
+  imported: number;
+  overwritten: number;
+  skipped: number;
+  renamed: number;
+}
+
 export type ConnectionStatus = 'idle' | 'testing' | 'success' | 'error';
 
 export interface ConnectionTestResult {

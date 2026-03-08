@@ -2,15 +2,25 @@ import { Database, Settings } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ProfileSelector } from "@/components/profiles/profile-selector";
+import type { ProfileImportConflictStrategy } from "@/lib/types";
 
 interface SidebarProps {
   onAddProfile: () => void;
   onEditProfile: (profileId: string) => void;
   onDisconnect: () => void;
+  onExportProfiles: (includeSecrets: boolean) => void;
+  onImportProfiles: (strategy: ProfileImportConflictStrategy) => void;
   activeProfileId: string | null;
 }
 
-export function Sidebar({ onAddProfile, onEditProfile, onDisconnect, activeProfileId }: SidebarProps) {
+export function Sidebar({
+  onAddProfile,
+  onEditProfile,
+  onDisconnect,
+  onExportProfiles,
+  onImportProfiles,
+  activeProfileId,
+}: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-sidebar">
       <div className="flex h-full flex-col">
@@ -26,6 +36,8 @@ export function Sidebar({ onAddProfile, onEditProfile, onDisconnect, activeProfi
             onAddNew={onAddProfile}
             onEdit={onEditProfile}
             onDisconnect={onDisconnect}
+            onExport={onExportProfiles}
+            onImport={onImportProfiles}
           />
         </ScrollArea>
 

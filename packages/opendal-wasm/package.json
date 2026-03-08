@@ -11,6 +11,7 @@
     "build": "wasm-pack build --target web --out-dir pkg --release",
     "build:dev": "wasm-pack build --target web --out-dir pkg --dev",
     "test": "wasm-pack test --headless --chrome",
+    "test:node": "wasm-pack test --node",
     "clean": "rm -rf pkg target"
   },
   "repository": {
