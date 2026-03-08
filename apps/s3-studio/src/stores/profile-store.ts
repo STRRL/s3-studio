@@ -250,9 +250,9 @@ export const useProfileStore = create<ProfileState>()(
 
       clearConnectionTest: (profileId) => {
         set((state) => {
-          const nextConnectionTest = { ...state.connectionTest };
-          delete nextConnectionTest[profileId];
-          return { connectionTest: nextConnectionTest };
+          const rest = { ...state.connectionTest };
+          delete rest[profileId];
+          return { connectionTest: rest };
         });
       },
 
@@ -315,10 +315,16 @@ export const useProfileStore = create<ProfileState>()(
                 // Preserve existing secrets when the incoming export omitted them
                 // (i.e. was produced with includeSecrets:false and the fields are blank).
                 const mergedConfig: S3Config = { ...incoming.config };
-                if (!mergedConfig.secretAccessKey && existing.config.secretAccessKey) {
+                const hasSameAccessKeyId =
+                  mergedConfig.accessKeyId === existing.config.accessKeyId;
+                if (
+                  hasSameAccessKeyId &&
+                  !mergedConfig.secretAccessKey &&
+                  existing.config.secretAccessKey
+                ) {
                   mergedConfig.secretAccessKey = existing.config.secretAccessKey;
                 }
-                if (!mergedConfig.sessionToken && existing.config.sessionToken) {
+                if (hasSameAccessKeyId && !mergedConfig.sessionToken && existing.config.sessionToken) {
                   mergedConfig.sessionToken = existing.config.sessionToken;
                 }
                 nextProfiles[matchedId] = {
