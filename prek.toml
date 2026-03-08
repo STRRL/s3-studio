@@ -1,0 +1,21 @@
+default_install_hook_types = ["pre-commit"]
+default_stages = ["pre-commit"]
+fail_fast = false
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "s3-studio-format"
+name = "s3-studio format (eslint --fix)"
+entry = "pnpm --filter @s3-studio/web run lint:fix"
+language = "system"
+files = "^apps/s3-studio/.*\\.(ts|tsx|js|jsx)$"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "workspace-lint"
+name = "workspace lint"
+entry = "pnpm lint"
+language = "system"
+pass_filenames = false

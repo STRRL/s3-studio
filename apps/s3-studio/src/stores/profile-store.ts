@@ -108,15 +108,12 @@ export const useProfileStore = create<ProfileState>()(
 
       deleteProfile: (id) => {
         set((state) => {
-          const remainingProfiles = { ...state.profiles };
-          delete remainingProfiles[id];
-
+          const { [id]: _removed, ...remainingProfiles } = state.profiles;
           const newOrder = state.profileOrder.filter((pid) => pid !== id);
           const newActiveId =
             state.activeProfileId === id ? (newOrder[0] ?? null) : state.activeProfileId;
 
-          const remainingTests = { ...state.connectionTest };
-          delete remainingTests[id];
+          const { [id]: _removedTest, ...remainingTests } = state.connectionTest;
 
           return {
             profiles: remainingProfiles,
@@ -139,8 +136,7 @@ export const useProfileStore = create<ProfileState>()(
 
       clearConnectionTest: (profileId) => {
         set((state) => {
-          const rest = { ...state.connectionTest };
-          delete rest[profileId];
+          const { [profileId]: _removed, ...rest } = state.connectionTest;
           return { connectionTest: rest };
         });
       },

@@ -13,6 +13,18 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "after-used",
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+      eqeqeq: ["error", "always", { null: "ignore" }],
+      "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   }
 );

@@ -15,7 +15,6 @@ interface BucketActionsProps {
   bucket: Bucket;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function BucketActions(_props: BucketActionsProps) {
   return (
     <DropdownMenu>
